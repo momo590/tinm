@@ -7,37 +7,42 @@ project. Read this *after* `conventions.md` and `experimental_roadmap.md`.
 
 ## ⮕ NEXT FOCUS (maintained at the end of every major session)
 
-**Last updated**: 2026-05-12 (end of session 2 — 2WikiMultihopQA added
-as 5th benchmark; MuSiQue 2-hop re-run at n=100; paper draft + consolidated
-report updated; .gitignore fix + benchmark/env/ now tracked).
+**Last updated**: 2026-05-12 (end of session 3 — paper-1 polish first
+pass: BibTeX entries in `paper/draft.md`, Figure 1 rendered via
+`paper/figures/make_fig1.py` (matplotlib turned out to install fine on
+this env, contrary to the prior session's belief), §5.3 + §2 + status
+header tightened. L1 activation threshold shipped in `tinm_lite.py`
+behind a default-off flag and mentioned in §6.5).
 
 The natural next steps, in suggested priority order. The agent should
 propose this as the default starting point at session start, but the user
 owns the decision.
 
-1. **Polish paper for submission readiness.** Experimental section is
-   now fully integrated (5 benchmarks, all numbers up to date in
-   `paper/draft.md` and `benchmark/runs/paper_results/paper_section.md`).
-   What remains:
-   - Convert references in `paper/related_work.md` into BibTeX entries
-     placed at the end of `paper/draft.md`.
-   - Render Figure 1 (Pareto plot) as a real matplotlib figure — requires
-     a Python env where matplotlib installs (current macOS Monterey +
-     Py 3.13 + Darwin 21 combo blocks torch and bundled wheels). Likely
-     options: separate venv with Py 3.11, Docker, or Colab notebook.
-   - First pass on draft polish (transitions, redundancy removal). The
-     §5.3 "Two complementary best results" paragraph in particular reads
-     a bit listy and could be tightened.
+1. **Final verification of paper-1 before submission.** The draft is
+   substantively complete and self-consistent. Remaining lower-effort
+   work before camera-ready:
+   - Verify the BibTeX block at the end of `paper/draft.md` against
+     DBLP / Semantic Scholar (author lists beyond first author, venue
+     abbreviations, the 3 entries flagged with `note = {verify ...}`).
+   - Convert the draft to LaTeX with a journal/venue template once the
+     target venue is locked (EMNLP 2026 main or Findings track per §2.1).
+   - Optional final prose pass for transitions/redundancy if a co-author
+     reads it through.
+   - Upload arXiv preprint when the BibTeX is verified.
 
 2. **Start MVP skill prototype** (separate from paper polish, weekend
    side-track). Cross-session continuity Claude skill, file-based PCP v0,
-   no cloud. Targeted at the user's own daily workflow first.
+   no cloud. Targeted at the user's own daily workflow first. The
+   activation-threshold L1 fix is already in the repo
+   (`tinm_lite.py::activation_threshold=True`) — the MVP should enable
+   it. L4 (parallel conversation index) is the next MVP-must-have to
+   build.
 
 3. **Future research follow-ups** — not for this session, but listed in
    the experimental roadmap (§L1–L4): multi-turn friction detection (now
    with stronger evidence from the 2WikiMultihopQA `tinm_adapt < tinm_a085`
-   significant negative result), structured agent state, conversation-level
-   retrieval index.
+   significant negative result; paper-2 candidate), structured agent state,
+   conversation-level retrieval index.
 
 ---
 
@@ -105,10 +110,11 @@ The companion documents:
 | 5 benchmarks (2 synthetic + MuSiQue 2-hop n=100 + MuSiQue 3-hop n=50 + 2WikiMultihopQA n=50) | ✓ run |
 | 4 agents (rag_baseline, rag_with_history, tinm_a085, tinm_adapt) | ✓ implemented (SDK `max_retries=8` for 529 resilience) |
 | TINM-full ablation | ✓ documented as negative result |
-| Paper draft | ~90%, all experimental numbers integrated (5 benchmarks) |
-| Consolidated experimental tables | ✓ in `benchmark/runs/paper_results/` (regenerated) |
-| BibTeX references | not yet — pointers only |
-| Figure 1 (matplotlib) | not yet — ASCII placeholder in draft (now showing 5 panels) |
+| Paper draft | ✓ end-to-end (~95%), all numbers integrated, BibTeX inlined, Figure 1 rendered |
+| Consolidated experimental tables | ✓ in `benchmark/runs/paper_results/` |
+| BibTeX references | ✓ inlined at end of `paper/draft.md` — needs verification pass |
+| Figure 1 (matplotlib) | ✓ `paper/figures/fig1_pareto.{pdf,png}` (regen via `make_fig1.py`) |
+| L1 activation threshold (MVP fix) | ✓ shipped in `tinm_lite.py` behind default-off flag |
 | MVP skill | not started |
 | PCP v0 spec | not started |
 

@@ -19,6 +19,8 @@ shows promising signal.
 """
 from __future__ import annotations
 
+import re
+
 import anthropic
 import numpy as np
 
@@ -31,6 +33,23 @@ TINM_SYSTEM_PROMPT = (
     "If a specific fact is asked for, state it directly and concisely. "
     "If the answer is not in the context, say so explicitly."
 )
+
+
+# L1 fix — activation threshold helpers. The mechanism engages TINM only when
+# memory is likely to matter: third turn or later, OR anaphora detected in the
+# current query. Otherwise the agent behaves as plain top-K RAG. See draft §6.5.
+_ANAPHORIC_TOKEN_RE = re.compile(
+    r"\b("
+    r"it|its|itself|they|them|their|theirs|themselves|"
+    r"this|that|these|those|"
+    r"he|him|his|himself|she|her|hers|herself"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _contains_anaphora(query: str) -> bool:
+    return bool(_ANAPHORIC_TOKEN_RE.search(query))
 
 
 class TINMLiteAgent:
@@ -46,6 +65,8 @@ class TINMLiteAgent:
         adaptive_alpha: bool = True,
         alpha_min: float = 0.20,
         alpha_max: float = 0.95,
+        activation_threshold: bool = False,
+        activation_min_turn: int = 3,
         model: str = "claude-sonnet-4-6",
         max_tokens: int = 512,
     ):
@@ -57,6 +78,17 @@ class TINMLiteAgent:
                             (preserve, resist distractors). Low consistency
                             → low alpha (adapt fast, handle topic shifts).
         alpha_min, alpha_max : bounds for the adaptive alpha schedule.
+        activation_threshold : if True, TINM only engages (anchor-blended
+                            retrieval + trajectory hint) when turn ≥
+                            `activation_min_turn` OR the current query
+                            contains a pronoun/demonstrative. Below
+                            threshold, the agent behaves as plain top-K
+                            RAG. Off by default to keep the paper's
+                            benchmarks comparable; this is the L1 fix
+                            shipped for the MVP product (see paper §6.5).
+        activation_min_turn : turn index at which TINM engages
+                            unconditionally if `activation_threshold` is
+                            True.
         """
         self.nodes = nodes
         self.top_k = top_k
@@ -66,6 +98,8 @@ class TINMLiteAgent:
         self.adaptive_alpha = adaptive_alpha
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
+        self.activation_threshold = activation_threshold
+        self.activation_min_turn = activation_min_turn
         self.model = model
         self.max_tokens = max_tokens
         self.client = anthropic.Anthropic(max_retries=8)
@@ -105,9 +139,20 @@ class TINMLiteAgent:
         """
         self.turn += 1
 
+        # L1 — activation threshold. Engage TINM only when memory is likely to
+        # matter: third turn or later, or anaphora in the current query.
+        # Otherwise behave as plain top-K RAG (no anchor blend, no trajectory
+        # hint), but keep updating the anchor in the background so TINM is
+        # ready as soon as it engages.
+        tinm_engaged = (
+            not self.activation_threshold
+            or self.turn >= self.activation_min_turn
+            or _contains_anaphora(query)
+        )
+
         # Blend the current query with the topic anchor for retrieval.
         # On Q1 there is no anchor yet, so we fall back to plain query retrieval.
-        if self.query_anchor is not None:
+        if tinm_engaged and self.query_anchor is not None:
             retrieval_emb = (
                 self.w_query * query_embedding
                 + self.w_anchor * self.query_anchor
@@ -133,12 +178,12 @@ class TINMLiteAgent:
                 + (1.0 - alpha_t) * query_embedding
             )
 
-        # Lean LLM call — no chat history. We still include a compact
-        # "trajectory hint" of prior queries (without responses) so the LLM
-        # can resolve anaphora in the current query. This is the textual form
-        # of the latent state z_t shared with the LLM.
+        # Lean LLM call — no chat history. When TINM is engaged we also include
+        # a compact "trajectory hint" of prior queries (without responses) so
+        # the LLM can resolve anaphora in the current query. This is the
+        # textual form of the latent state z_t shared with the LLM.
         context_str = "\n\n".join(f"[Node {n.id}] {n.content}" for n in retrieved)
-        if self.prior_queries:
+        if tinm_engaged and self.prior_queries:
             trace = " ; ".join(f"({i + 1}) {q}" for i, q in enumerate(self.prior_queries))
             user_msg = (
                 f"Prior questions in this conversation: {trace}\n\n"

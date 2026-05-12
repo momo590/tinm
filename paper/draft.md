@@ -1,8 +1,13 @@
 # TINM: Compressed Trajectory Memory for Multi-Turn LLM Agents
 
-**Status**: draft skeleton. Abstract and Introduction are drafted in full prose;
-Method is half-drafted; Related Work is a list of pointers; Results section
-imports the consolidated experimental output (`benchmark/runs/paper_results/paper_section.md`).
+**Status**: end-to-end draft, ~90% complete. Abstract, Introduction, Method,
+Experimental Setup, Results, Discussion, and Conclusion are in full prose
+with all numbers integrated across the 5 benchmarks. Figure 1 is rendered
+(`paper/figures/fig1_pareto.{pdf,png}`, regenerable from
+`paper/figures/make_fig1.py`). Related Work pointers live in
+`paper/related_work.md`; the prose §2 cites them under their `@tag` names,
+and the corresponding BibTeX entries are inlined at the end of this file
+(to be verified before camera-ready).
 
 ---
 
@@ -155,12 +160,16 @@ pipelines without retraining.
 et al., 2018; MuSiQue, Trivedi et al., 2022; 2WikiMultihopQA, Ho et al.,
 2020) provide natural test beds for memory-dependent retrieval: each
 question requires composing information across several paragraphs. We
-use MuSiQue because of its explicit per-hop decomposition with
-ground-truth intermediate answers, which lets us measure quality at the
-subquestion level rather than only on the final answer. Standard
-leaderboard work on these benchmarks targets absolute quality; we
-report a complementary axis (quality versus token cost) where memory
-mechanism design matters most.
+use MuSiQue (2- and 3-hop) for its explicit per-hop decomposition with
+ground-truth intermediate answers, which lets us measure quality at
+the subquestion level rather than only on the final answer. As a
+second real-data benchmark we use 2WikiMultihopQA, restricted to its
+strictly linear 2-hop sub-class (`obj_0 == subj_1`, excluding the
+`comparison` type), where the explicit `(subj, rel, obj)` evidence
+triplets provide a similarly clean Q1→Q2 anaphoric structure with a
+different surface distribution. Standard leaderboard work on these
+benchmarks targets absolute quality; we report a complementary axis
+(quality versus token cost) where memory mechanism design matters most.
 
 **Conversational continuity and faithfulness.** Conversational QA
 benchmarks (QuAC, Choi et al., 2018; CoQA, Reddy et al., 2019) capture
@@ -360,69 +369,56 @@ chat-history overhead correspondingly larger. 2WikiMultihopQA sits
 in between at 0.93 (−7 %) and gives the largest *quality* margin over
 stateless RAG of any benchmark (Δ = +0.114, t = 4.03).
 
-**Figure 1** [PDF version forthcoming; current draft summarises in
-ASCII]. Quality vs. total token cost, normalized within each benchmark.
-Each panel shows the four agents (◇ `rag_baseline`, ○
-`rag_with_history`, ▲ `tinm_a085`, ★ `tinm_adapt`). TINM variants
-occupy the upper-left (high quality, low cost) region across all five
-benchmarks. `rag_with_history` is Pareto-dominated on four of five
-benchmarks: continuity, topic-shift, MuSiQue 3-hop, and 2WikiMultihopQA.
-On 3-hop specifically, `rag_with_history` sits *below* `rag_baseline`
-despite using more tokens.
+**Figure 1** (`paper/figures/fig1_pareto.pdf`, regeneratable from
+`paper/figures/make_fig1.py`). Quality vs. total token cost across the
+five benchmarks; one panel per benchmark, four agents per panel.
+Markers: ◇ `rag_baseline`, ○ `rag_with_history`, ▲ `tinm_a085`,
+★ `tinm_adapt`. The Pareto-optimal agent per panel is bordered. TINM
+variants occupy the upper-left (high quality, low cost) region across
+all five benchmarks. `rag_with_history` is Pareto-dominated on four of
+five benchmarks: continuity, topic-shift, MuSiQue 3-hop, and
+2WikiMultihopQA. On 3-hop specifically, `rag_with_history` sits *below*
+`rag_baseline` despite using more tokens.
 
-```
-       Quality vs. token cost (relative position per benchmark)
-       ─────────────────────────────────────────────────────────────
+![Figure 1 — Pareto frontier](figures/fig1_pareto.png)
 
-  Continuity   Topic shift  MuSiQue 2-h  MuSiQue 3-h  2WikiMultihopQA
-  high q ─▲★   ─★           ─▲★          ─▲★          ─▲★
-         ◇                                            ─○
-         ─    ─◇▲           ─○           ─            ─
-         ─○   ─○            ─◇           ─○           ─◇
-  low q  └─    └─            └─           └─           └─
-        cost→      cost→        cost→         cost→         cost→
+### 5.3 Headline findings
 
-  ▲ tinm_a085   ★ tinm_adapt   ◇ rag_baseline   ○ rag_with_history
-```
+**TINM is Pareto-improved on every benchmark.** On all five benchmarks
+the best TINM variant matches or exceeds the quality of
+`rag_with_history` while using fewer tokens — the synthetic benchmarks
+yield −23 % token savings (chat history adds the most overhead when
+retrieved context is small), the real-data benchmarks yield −5 % to
+−7 % (retrieved Wikipedia paragraphs dominate the prompt budget on
+both sides). Four of five comparisons against `rag_with_history` reach
+significance at α = 0.05; the fifth, synthetic topic shift, is where
+TINM and `rag_with_history` tie on quality but the *adaptive* variant
+of TINM significantly beats the *fixed* variant (Δ = +0.035, t = 2.90),
+which is the cleanest validation in the paper of friction-adaptive
+anchor update.
 
-### 5.3 Two-paragraph headline
+**The two largest effects are mutually independent and on real data.**
+The most heavily-powered comparison is on MuSiQue 2-hop at n = 100,
+where `tinm_a085` beats `rag_baseline` at t = 4.05 (Δ = +0.067); the
+largest absolute margin is on 2WikiMultihopQA, where the same comparison
+gives Δ = +0.114 quality (t = 4.03) with 23 % fewer tokens. These two
+results sit on distinct datasets — 2WikiMultihopQA is not a subset of
+MuSiQue — so they cross-validate that the mechanism transfers across
+real-data multi-hop QA rather than being dataset-specific.
 
-**TINM is Pareto-improved on every benchmark.** On all five benchmarks, the
-best TINM variant matches or exceeds the quality of
-`rag_with_history` while using fewer tokens. The synthetic benchmarks
-show the largest token savings (−23 %), driven by the absence of full
-chat-history in TINM's LLM prompt; the real-data benchmarks show
-smaller token savings (−5 % to −7 %) because retrieved Wikipedia
-paragraphs dominate the prompt budget, but TINM still wins on quality.
-Four of five comparisons reach statistical significance at α = 0.05;
-the fifth (synthetic topic shift) is the only benchmark where the
-TINM-vs-history quality margin is not significant on its own, but on
-that same benchmark the *adaptive* variant of TINM significantly beats
-the *fixed* variant (Δ = +0.035, t = 2.90), confirming that friction-
-adaptive update is meaningful for explicit topic changes.
-
-**Two complementary "best" results.** The strongest *statistical* effect
-is on MuSiQue 2-hop with n = 100: `tinm_a085` beats `rag_baseline` at
-t = 4.05 (Δ = +0.067), giving a clear Pareto improvement on what is by
-some margin the most numerically powered comparison in the paper. The
-strongest *absolute* effect is on 2WikiMultihopQA: `tinm_a085` beats
-`rag_baseline` by Δ = +0.114 quality (t = 4.03) while using 23 % fewer
-tokens. The two effects are mutually independent — 2WikiMultihopQA is a
-separate dataset, not a subset of MuSiQue — and together they support
-that the mechanism transfers cleanly across the two real-data benchmarks.
-
-**The most striking failure mode is on the longest reasoning chain.**
-On MuSiQue 3-hop, `rag_with_history` scores 0.265—*below* `rag_baseline`
-at 0.300—while TINM-a085 scores 0.322. Qualitative inspection of the
-3-hop responses shows the failure mechanism: with full chat history,
-the LLM sees the intermediate answers to Q1 and Q2 in its prompt; on
-Q3 it occasionally surfaces those intermediate entities as the target
-answer, conflating hop levels. TINM's compressed memory (anchor +
-trajectory hint with no responses) preserves the disambiguation
-context for retrieval and anaphora resolution without seeding the LLM
-with hop-mixing material. The inversion is specific to 3-hop chains:
-on the 2-hop real-data benchmarks (MuSiQue 2-hop, 2WikiMultihopQA),
-history-augmented RAG significantly beats stateless RAG.
+**The most striking failure mode of `rag_with_history` is on the longest
+reasoning chain.** On MuSiQue 3-hop, `rag_with_history` scores
+0.265 — *below* `rag_baseline` at 0.300 — while `tinm_a085` scores
+0.322. Qualitative inspection of the 3-hop responses shows the failure
+mechanism: with full chat history, the LLM sees the intermediate
+answers to Q1 and Q2 in its prompt and, on Q3, occasionally surfaces
+those intermediate entities as the target answer, conflating hop
+levels. TINM's compressed memory (anchor + trajectory hint with no
+responses) preserves the disambiguation context for retrieval and
+anaphora resolution without seeding the LLM with hop-mixing material.
+This inversion is specific to 3-hop chains: on the two 2-hop real-data
+benchmarks (MuSiQue 2-hop, 2WikiMultihopQA), `rag_with_history`
+significantly beats `rag_baseline`.
 
 ### 5.4 Additional analyses
 
@@ -523,11 +519,24 @@ multi-anchor update is left to future work.
 
 ### 6.5 Future work
 
+- **Activation threshold (already in the repo, not benchmarked here).**
+  On short chains (turn ≤ 2 with no anaphora in the current query), the
+  anchor + trajectory-hint overhead has nothing to compress, and our
+  measurements implicitly include this overhead even when memory is not
+  needed. A trivial fix engages TINM only when `turn ≥ 3` or
+  `_contains_anaphora(query)` is true; below threshold the agent falls
+  back to plain top-K RAG while still updating the anchor in the
+  background. The implementation ships as
+  `TINMLiteAgent(activation_threshold=True)` in
+  `benchmark/agents/tinm_lite.py` and is off by default to keep the
+  paper's benchmark comparable; the production MVP should enable it.
 - **Multi-turn friction detection.** Accumulated divergence over a
   sliding window; cycle detection in retrieval; LLM-side
   cross-reference of recent answers. Should resolve the
   distractor-vs-shift ambiguity that limits both adaptive and
-  dual-anchor variants.
+  dual-anchor variants. The 2WikiMultihopQA result that `tinm_adapt`
+  is significantly worse than `tinm_a085` (§5.2 table, §6.2 discussion)
+  strengthens the empirical case for this line of work.
 - **Larger benchmarks.** 200–500 tasks per benchmark; additional
   real-data benchmarks beyond MuSiQue and 2WikiMultihopQA (HotpotQA,
   CoQA, QuAC) that mix retrieval with extended dialogue.
@@ -572,7 +581,208 @@ not yet built.
 
 ## References
 
-*[Placeholder — populate from `related_work.md` once content is finalised.]*
+The 22 BibTeX entries below cover every `@tag`-style reference cited in
+the prose. Titles, venues, and years follow the standard published forms
+to the best of our knowledge; **the entire block should be verified
+against the canonical citation database (DBLP / Semantic Scholar / the
+venues' official records) before camera-ready submission**, in
+particular for: author lists beyond the first author, exact venue
+abbreviations, and a few entries where the year that appeared in
+`related_work.md` (Asai 2023, Trivedi-IRCoT 2022, Whittington 2022)
+likely corresponds to the arXiv preprint rather than the conference
+publication.
+
+```bibtex
+@inproceedings{lewis_rag,
+  author    = {Patrick Lewis and Ethan Perez and Aleksandra Piktus and Fabio Petroni and Vladimir Karpukhin and Naman Goyal and Heinrich K{\"u}ttler and Mike Lewis and Wen-tau Yih and Tim Rockt{\"a}schel and Sebastian Riedel and Douwe Kiela},
+  title     = {Retrieval-Augmented Generation for Knowledge-Intensive {NLP} Tasks},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020}
+}
+
+@inproceedings{borgeaud_retro,
+  author    = {Sebastian Borgeaud and others},
+  title     = {Improving Language Models by Retrieving from Trillions of Tokens},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2022}
+}
+
+@article{gao_rag_survey,
+  author    = {Yunfan Gao and Yun Xiong and Xinyu Gao and Kangxiang Jia and Jinliu Pan and Yuxi Bi and Yi Dai and Jiawei Sun and Haofen Wang},
+  title     = {Retrieval-Augmented Generation for Large Language Models: A Survey},
+  journal   = {arXiv preprint},
+  year      = {2024},
+  eprint    = {2312.10997}
+}
+
+@inproceedings{asai_selfrag,
+  author    = {Akari Asai and Zeqiu Wu and Yizhong Wang and Avirup Sil and Hannaneh Hajishirzi},
+  title     = {Self-{RAG}: Learning to Retrieve, Generate, and Critique through Self-Reflection},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+  note      = {arXiv preprint 2023}
+}
+
+@inproceedings{trivedi_ircot,
+  author    = {Harsh Trivedi and Niranjan Balasubramanian and Tushar Khot and Ashish Sabharwal},
+  title     = {Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions},
+  booktitle = {Annual Meeting of the Association for Computational Linguistics (ACL)},
+  year      = {2023},
+  note      = {arXiv preprint 2022}
+}
+
+@inproceedings{park_generative_agents,
+  author    = {Joon Sung Park and Joseph C. O'Brien and Carrie J. Cai and Meredith Ringel Morris and Percy Liang and Michael S. Bernstein},
+  title     = {Generative Agents: Interactive Simulacra of Human Behavior},
+  booktitle = {ACM Symposium on User Interface Software and Technology (UIST)},
+  year      = {2023}
+}
+
+@article{packer_memgpt,
+  author    = {Charles Packer and Sarah Wooders and Kevin Lin and Vivian Fang and Shishir G. Patil and Ion Stoica and Joseph E. Gonzalez},
+  title     = {{MemGPT}: Towards {LLMs} as Operating Systems},
+  journal   = {arXiv preprint},
+  year      = {2024},
+  eprint    = {2310.08560}
+}
+
+@article{wang_voyager,
+  author    = {Guanzhi Wang and Yuqi Xie and Yunfan Jiang and Ajay Mandlekar and Chaowei Xiao and Yuke Zhu and Linxi Fan and Anima Anandkumar},
+  title     = {Voyager: An Open-Ended Embodied Agent with Large Language Models},
+  journal   = {Transactions on Machine Learning Research (TMLR)},
+  year      = {2024},
+  note      = {arXiv preprint 2023}
+}
+
+@article{dayan_sr,
+  author    = {Peter Dayan},
+  title     = {Improving Generalization for Temporal Difference Learning: The Successor Representation},
+  journal   = {Neural Computation},
+  volume    = {5},
+  number    = {4},
+  pages     = {613--624},
+  year      = {1993}
+}
+
+@article{russek_sr,
+  author    = {Evan M. Russek and Ida Momennejad and Matthew M. Botvinick and Samuel J. Gershman and Nathaniel D. Daw},
+  title     = {Predictive Representations Can Link Model-Based Reinforcement Learning to Model-Free Mechanisms},
+  journal   = {PLoS Computational Biology},
+  volume    = {13},
+  number    = {9},
+  pages     = {e1005768},
+  year      = {2017}
+}
+
+@article{momennejad_sr_wm,
+  author    = {Ida Momennejad and Evan M. Russek and Jin H. Kim and Samuel J. Gershman and Nathaniel D. Daw and Matthew M. Botvinick},
+  title     = {The Successor Representation in Human Reinforcement Learning},
+  journal   = {Nature Human Behaviour},
+  volume    = {1},
+  number    = {9},
+  pages     = {680--692},
+  year      = {2017}
+}
+
+@article{stachenfeld_predictive_map,
+  author    = {Kimberly L. Stachenfeld and Matthew M. Botvinick and Samuel J. Gershman},
+  title     = {The Hippocampus as a Predictive Map},
+  journal   = {Nature Neuroscience},
+  volume    = {20},
+  number    = {11},
+  pages     = {1643--1653},
+  year      = {2017}
+}
+
+@article{whittington_tem,
+  author    = {James C. R. Whittington and Timothy H. Muller and Shirley Mark and Guifen Chen and Caswell Barry and Neil Burgess and Timothy E. J. Behrens},
+  title     = {The {Tolman-Eichenbaum} Machine: Unifying Space and Relational Memory through Generalization in the Hippocampal Formation},
+  journal   = {Cell},
+  volume    = {183},
+  number    = {5},
+  pages     = {1249--1263},
+  year      = {2020},
+  note      = {related\_work.md erroneously listed 2022}
+}
+
+@article{buzsaki_moser,
+  author    = {Gy{\"o}rgy Buzs{\'a}ki and Edvard I. Moser},
+  title     = {Memory, Navigation and Theta Rhythm in the Hippocampal-Entorhinal System},
+  journal   = {Nature Neuroscience},
+  volume    = {16},
+  number    = {2},
+  pages     = {130--138},
+  year      = {2013}
+}
+
+@article{eichenbaum_beyond_space,
+  author    = {Howard Eichenbaum},
+  title     = {On the Integration of Space, Time, and Memory},
+  journal   = {Neuron},
+  volume    = {95},
+  number    = {5},
+  pages     = {1007--1018},
+  year      = {2017},
+  note      = {verify exact venue: Neuron vs Nature Reviews Neuroscience}
+}
+
+@article{hafner_dreamer,
+  author    = {Danijar Hafner and Jurgis Pasukonis and Jimmy Ba and Timothy Lillicrap},
+  title     = {Mastering Diverse Domains through World Models},
+  journal   = {arXiv preprint},
+  year      = {2023},
+  eprint    = {2301.04104}
+}
+
+@inproceedings{yang_hotpot,
+  author    = {Zhilin Yang and Peng Qi and Saizheng Zhang and Yoshua Bengio and William W. Cohen and Ruslan Salakhutdinov and Christopher D. Manning},
+  title     = {{HotpotQA}: A Dataset for Diverse, Explainable Multi-Hop Question Answering},
+  booktitle = {Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  year      = {2018}
+}
+
+@article{trivedi_musique,
+  author    = {Harsh Trivedi and Niranjan Balasubramanian and Tushar Khot and Ashish Sabharwal},
+  title     = {{MuSiQue}: Multihop Questions via Single-Hop Question Composition},
+  journal   = {Transactions of the Association for Computational Linguistics (TACL)},
+  volume    = {10},
+  pages     = {539--554},
+  year      = {2022}
+}
+
+@inproceedings{ho_2wiki,
+  author    = {Xanh Ho and Anh-Khoa Duong Nguyen and Saku Sugawara and Akiko Aizawa},
+  title     = {Constructing a Multi-Hop {QA} Dataset for Comprehensive Evaluation of Reasoning Steps},
+  booktitle = {International Conference on Computational Linguistics (COLING)},
+  year      = {2020}
+}
+
+@article{lohmann_turtles,
+  author    = {Kenneth J. Lohmann and Catherine M. F. Lohmann and Courtney S. Endres},
+  title     = {The Sensory Ecology of Ocean Navigation},
+  journal   = {Journal of Experimental Biology},
+  volume    = {211},
+  pages     = {1719--1728},
+  year      = {2008},
+  note      = {verify: substrate doc cites a related Lohmann paper on geomagnetic imprinting; the canonical magnetic-map reference may instead be Lohmann \& Lohmann 1996 / 2001 in Nature.}
+}
+
+@inproceedings{choi_quac,
+  author    = {Eunsol Choi and He He and Mohit Iyyer and Mark Yatskar and Wen-tau Yih and Yejin Choi and Percy Liang and Luke Zettlemoyer},
+  title     = {{QuAC}: Question Answering in Context},
+  booktitle = {Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  year      = {2018}
+}
+
+@article{reddy_coqa,
+  author    = {Siva Reddy and Danqi Chen and Christopher D. Manning},
+  title     = {{CoQA}: A Conversational Question Answering Challenge},
+  journal   = {Transactions of the Association for Computational Linguistics (TACL)},
+  volume    = {7},
+  pages     = {249--266},
+  year      = {2019}
+}
+```
 
 ---
 
