@@ -19,36 +19,53 @@ OpenClaw, …) that implements it.
 
 ## What it does NOT do yet
 
-- No background watcher; the skill is invoked manually via `/tinm …`.
+- No background watcher; the user must invoke `/tinm …` explicitly.
 - No second-client validation. Until a Claude.ai or ChatGPT client
   reads a thread written by Claude Code, the PCP v0 contract is only
   half-validated.
 - No encryption, no remote sync, no concurrency control (v0.1 trusts
   single-user serial access).
+- The auto-discovered "skill" path in Claude Code did not work for us
+  in practice (the skill folder was present but the skill was not
+  loaded into `available-skills` even after a full app restart). We
+  ship a slash command `~/.claude/commands/tinm.md` as the primary
+  invocation path; the SKILL.md remains in the skill folder for the
+  day auto-discovery starts working.
 
 See [`pcp_v0_spec.md`](pcp_v0_spec.md) §5 for the full list of what is
 out of scope for v0.1.
 
 ## Install
 
+The `<REPO>` placeholder below is the absolute path to the TINM repo on
+your machine. If you are still on the worktree branch
+`claude/loving-saha-f468b4`, that is
+`/Users/user/TNIM/.claude/worktrees/loving-saha-f468b4`. After the
+branch is merged into `main` and the worktree removed, it becomes
+`/Users/user/TNIM`.
+
 ```bash
-# 1. Symlink the skill source into Claude Code's user skills directory
+# 1. Symlink the skill source (keeps SKILL.md scripts in one place)
 mkdir -p ~/.claude/skills
-ln -s /Users/user/TNIM/mvp/skill ~/.claude/skills/tinm
+ln -s <REPO>/mvp/skill ~/.claude/skills/tinm
 
-# 2. Install Python dependencies in a venv that Claude Code can call
-python3.11 -m venv ~/.tinm/.venv
-source ~/.tinm/.venv/bin/activate
-pip install -r /Users/user/TNIM/mvp/requirements.txt
+# 2. Symlink the slash command — this is what makes `/tinm …` work
+mkdir -p ~/.claude/commands
+ln -s <REPO>/mvp/commands/tinm.md ~/.claude/commands/tinm.md
 
-# 3. Add the venv to PATH (optional, makes the scripts callable as commands)
-# Edit ~/.zshrc:
-#   export PATH="$HOME/.tinm/.venv/bin:$PATH"
+# 3. Create the TINM virtualenv (Py 3.9 system or any 3.9–3.12 you have)
+/usr/bin/python3 -m venv ~/.tinm/.venv
+~/.tinm/.venv/bin/pip install --no-cache-dir -r <REPO>/mvp/requirements.txt
 ```
 
-The skill assumes `python` resolves to an interpreter that has
-`sentence-transformers` and `numpy` available. Adjust the install
-step if you prefer a project-local venv.
+The `requirements.txt` pins `numpy<2` because torch 2.2 (the wheel
+sentence-transformers pulls on Py 3.9) is built against the numpy 1.x
+ABI. Without the pin, `encode()` raises "Numpy is not available" at
+runtime.
+
+The slash command and the scripts both reference the venv interpreter
+by absolute path (`~/.tinm/.venv/bin/python`), so you do not need to
+adjust `PATH`.
 
 ## Usage in a Claude Code session
 
@@ -89,8 +106,10 @@ JSON schema: [`pcp_v0_spec.md`](pcp_v0_spec.md) §2 (trajectory),
 mvp/
 ├── pcp_v0_spec.md     # the protocol (read this first)
 ├── README.md          # this file
-├── requirements.txt   # Python deps
-└── skill/             # source of the Claude Code skill
+├── requirements.txt   # Python deps (numpy<2 pinned)
+├── commands/
+│   └── tinm.md        # the /tinm slash command (primary invocation path)
+└── skill/             # the (currently auto-load-broken) Claude Code skill
     ├── SKILL.md       # triggering instructions for Claude
     ├── tinm_init.py
     ├── tinm_load.py

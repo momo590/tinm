@@ -125,7 +125,8 @@ The companion documents:
 | Figure 1 (matplotlib) | ✓ `paper/figures/fig1_pareto.{pdf,png}` (regen via `make_fig1.py`) |
 | L1 activation threshold (MVP fix) | ✓ shipped in `tinm_lite.py` behind default-off flag |
 | **PCP v0 spec** | ✓ `mvp/pcp_v0_spec.md` (file-based JSON, single-user, deferred features in §5) |
-| **MVP skill (Claude Code)** | ✓ written + dogfooded; install: `ln -s …/mvp/skill ~/.claude/skills/tinm` + `~/.tinm/.venv` with `numpy<2` pin |
+| **MVP skill (Claude Code)** | ✓ written + dogfooded; install: `ln -s …/mvp/skill ~/.claude/skills/tinm` + `~/.tinm/.venv` with `numpy<2` pin. Auto-discovery did not work in practice — primary invocation is via the slash command below. |
+| **MVP slash command `/tinm`** | ✓ `mvp/commands/tinm.md`, install: `ln -s …/mvp/commands/tinm.md ~/.claude/commands/tinm.md`. Subcommands: `load`, `init`, `update`, `artifact add\|find`. |
 | L4 conversation index (MVP feature) | ✓ shipped in `mvp/skill/tinm_artifact.py` (substring + embedding fallback) |
 
 ## 4. Open strategic decisions (await user input)
