@@ -69,12 +69,26 @@ limit.
 ## 5. Conservatism on destructive operations
 
 - The agent never runs `rm -rf`, `git push --force`, `git reset --hard`,
-  or similar destructive git/filesystem commands without explicit user
-  request for the specific destructive action.
+  `git clean -f`, `git checkout .`, or similar destructive
+  git/filesystem commands without explicit user request for the
+  specific destructive action.
 - File overwrites (`Write` on existing files) are acceptable for
-  iteration. The agent assumes git is the user's safety net here.
+  iteration. The repo is under git (initialized 2026-05-12), so git is
+  the safety net.
 - Mass refactors that touch >5 files: agent describes the plan and waits
   for confirmation.
+
+### Git workflow specifics
+- **Commits only on explicit user request.** The agent does not commit
+  proactively after edits, even when many files have changed.
+- **Never push without explicit request** (no remote currently set; if
+  one is added, this rule applies double for `main`).
+- **Never modify git config.**
+- **Stage with care.** Prefer adding files by name; `git add .` is only
+  acceptable after verifying `git status` shows no sensitive files
+  (e.g. `.env`, caches) about to be tracked.
+- **Commit messages** describe the *why* in 1-2 sentences, then list
+  notable changes. Always include the `Co-Authored-By` trailer.
 
 ## 6. Code style
 
