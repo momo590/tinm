@@ -582,15 +582,16 @@ not yet built.
 ## References
 
 The 22 BibTeX entries below cover every `@tag`-style reference cited in
-the prose. Titles, venues, and years follow the standard published forms
-to the best of our knowledge; **the entire block should be verified
-against the canonical citation database (DBLP / Semantic Scholar / the
-venues' official records) before camera-ready submission**, in
-particular for: author lists beyond the first author, exact venue
-abbreviations, and a few entries where the year that appeared in
-`related_work.md` (Asai 2023, Trivedi-IRCoT 2022, Whittington 2022)
-likely corresponds to the arXiv preprint rather than the conference
-publication.
+the prose. Each entry was cross-checked against DBLP and Semantic
+Scholar in a verification pass (titles, first-pass author lists, venue
+years, page ranges). Two residual caveats: the Borgeaud (RETRO) entry
+truncates a 27-author list to first-author + `and others` for
+readability — expand it when migrating to the venue's .bib file if the
+template requires the full author list; and the Momennejad 2017
+author-order beyond the first author was given inconsistently by the
+search engines we consulted, so trust the published Nature Human
+Behaviour record (`s41562-017-0180-8`) over the BibTeX line below if a
+final disambiguation is needed.
 
 ```bibtex
 @inproceedings{lewis_rag,
@@ -608,7 +609,7 @@ publication.
 }
 
 @article{gao_rag_survey,
-  author    = {Yunfan Gao and Yun Xiong and Xinyu Gao and Kangxiang Jia and Jinliu Pan and Yuxi Bi and Yi Dai and Jiawei Sun and Haofen Wang},
+  author    = {Yunfan Gao and Yun Xiong and Xinyu Gao and Kangxiang Jia and Jinliu Pan and Yuxi Bi and Yi Dai and Jiawei Sun and Meng Wang and Haofen Wang},
   title     = {Retrieval-Augmented Generation for Large Language Models: A Survey},
   journal   = {arXiv preprint},
   year      = {2024},
@@ -722,22 +723,22 @@ publication.
   volume    = {95},
   number    = {5},
   pages     = {1007--1018},
-  year      = {2017},
-  note      = {verify exact venue: Neuron vs Nature Reviews Neuroscience}
+  year      = {2017}
 }
 
 @article{hafner_dreamer,
   author    = {Danijar Hafner and Jurgis Pasukonis and Jimmy Ba and Timothy Lillicrap},
   title     = {Mastering Diverse Domains through World Models},
-  journal   = {arXiv preprint},
-  year      = {2023},
-  eprint    = {2301.04104}
+  journal   = {Nature},
+  year      = {2025},
+  note      = {Originally arXiv:2301.04104 (2023); journal version Nature 2025.}
 }
 
 @inproceedings{yang_hotpot,
   author    = {Zhilin Yang and Peng Qi and Saizheng Zhang and Yoshua Bengio and William W. Cohen and Ruslan Salakhutdinov and Christopher D. Manning},
   title     = {{HotpotQA}: A Dataset for Diverse, Explainable Multi-Hop Question Answering},
   booktitle = {Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  pages     = {2369--2380},
   year      = {2018}
 }
 
@@ -758,19 +759,20 @@ publication.
 }
 
 @article{lohmann_turtles,
-  author    = {Kenneth J. Lohmann and Catherine M. F. Lohmann and Courtney S. Endres},
-  title     = {The Sensory Ecology of Ocean Navigation},
-  journal   = {Journal of Experimental Biology},
-  volume    = {211},
-  pages     = {1719--1728},
-  year      = {2008},
-  note      = {verify: substrate doc cites a related Lohmann paper on geomagnetic imprinting; the canonical magnetic-map reference may instead be Lohmann \& Lohmann 1996 / 2001 in Nature.}
+  author    = {Kenneth J. Lohmann and Nathan F. Putman and Catherine M. F. Lohmann},
+  title     = {Geomagnetic Imprinting: A Unifying Hypothesis of Long-Distance Natal Homing in Salmon and Sea Turtles},
+  journal   = {Proceedings of the National Academy of Sciences (PNAS)},
+  volume    = {105},
+  number    = {49},
+  pages     = {19096--19101},
+  year      = {2008}
 }
 
 @inproceedings{choi_quac,
   author    = {Eunsol Choi and He He and Mohit Iyyer and Mark Yatskar and Wen-tau Yih and Yejin Choi and Percy Liang and Luke Zettlemoyer},
   title     = {{QuAC}: Question Answering in Context},
   booktitle = {Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  pages     = {2174--2184},
   year      = {2018}
 }
 
