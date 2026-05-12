@@ -143,8 +143,56 @@ The agent **never** modifies these conventions silently or in the course
 of executing some other task. If the agent encounters a situation not
 covered by these conventions, it asks the user.
 
+## 11. Session protocol
+
+### At session start, the agent must:
+
+1. Read `notes/conventions.md` (this document).
+2. Read `notes/project_charter.md`.
+3. Read `notes/experimental_roadmap.md`.
+4. Verify `ANTHROPIC_API_KEY` is present in the Bash environment (without
+   echoing its value — length and prefix-of-3 only if needed).
+5. Acknowledge readiness with a short message that includes the current
+   "Next focus" item from the charter as a proposed direction, and
+   offers 1-2 alternative directions if the user prefers something else.
+
+### After each major step, the agent must:
+
+1. Update `notes/project_charter.md`:
+   - Update the "Current state" table to reflect what was completed.
+   - Update the "Next focus" section with the suggested next step for
+     the following session (the agent's best judgment, framed as a
+     proposal not a commitment).
+2. Commit the work *together with* the charter update in a single
+   commit (per the §5 git workflow rules: still only on explicit user
+   request).
+
+### What counts as a "major step"
+
+- Running a full benchmark or LLM evaluation pilot.
+- Completing a paper section in prose.
+- Identifying and documenting a new limitation or future-work item.
+- Major refactors touching agent code or the evaluation pipeline.
+- Setting up new infrastructure (e.g., adding a new dataset loader).
+
+Trivial work (a typo, a single config tweak, an exploratory dry-run,
+a short clarification) does **not** require a charter update. The
+agent uses judgment; when in doubt, asks the user.
+
+### Why this protocol exists
+
+This is TINM applied recursively: the charter is the project's
+compressed anchor across sessions, and the "Next focus" section is the
+trajectory hint that lets the next agent reorient with minimal context
+loss. Implementing TINM-skill in the future should automate this
+process; until then, the agent maintains it manually.
+
 ---
 
 ## Changelog
 
 - **2026-05-12** — Initial version. Established by user during TINM project.
+- **2026-05-12** — Added §11 Session protocol (read three notes docs at
+  start, update charter after major steps). Motivated by the user's
+  observation that this manual protocol is exactly what a working
+  TINM-skill would automate.
