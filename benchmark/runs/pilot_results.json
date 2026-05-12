@@ -1,0 +1,662 @@
+{
+  "rag_baseline": [
+    {
+      "task_id": 0,
+      "agent_name": "rag_baseline",
+      "subquestion_input_tokens": [
+        277,
+        286
+      ],
+      "subquestion_output_tokens": [
+        44,
+        38
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          4,
+          0,
+          5,
+          8,
+          6
+        ],
+        [
+          1,
+          2,
+          121,
+          124,
+          80
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n- **Deadline**: Project Alpha's deadline is **2026-06-15**.\n- **Technologies**: Project Alpha uses **Python** and **FastAPI**.",
+        "Based on the provided context:\n\n- **Budget**: 120,000 EUR (for Project Alpha)\n- **Lead**: Marie Dupont is leading Project Alpha"
+      ],
+      "distractor_input_tokens": [
+        294
+      ],
+      "distractor_output_tokens": [
+        37
+      ],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "deadline": true,
+        "budget": true,
+        "tech_stack": true,
+        "lead": true
+      },
+      "facts_found_judge": {
+        "deadline": true,
+        "budget": true,
+        "tech_stack": true,
+        "lead": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": true
+    },
+    {
+      "task_id": 1,
+      "agent_name": "rag_baseline",
+      "subquestion_input_tokens": [
+        258,
+        290
+      ],
+      "subquestion_output_tokens": [
+        57,
+        77
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          41,
+          53,
+          47,
+          45,
+          54
+        ],
+        [
+          42,
+          1,
+          121,
+          41,
+          3
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n**Client:** The client for Project Beta is **Acme Corp**, as confirmed in the latest review (Node 41).\n\n**Deadline:** The deadline for Project Beta is **not mentioned** anywhere in the provided context.",
+        "Based on the provided context:\n\n**Current Status:** Project Alpha is **in progress, on track**.\n\n**Team Size:** Project Beta has **7 engineers** on the team.\n\n> Note: These details come from two different projects (Alpha and Beta respectively), so if your question refers to a single specific project, please clarify which one you mean."
+      ],
+      "distractor_input_tokens": [
+        278
+      ],
+      "distractor_output_tokens": [
+        33
+      ],
+      "quality_score": 0.325,
+      "facts_found_symbolic": {
+        "client": true,
+        "status": false,
+        "deadline": false,
+        "team_size": true
+      },
+      "facts_found_judge": {
+        "client": true,
+        "status": false,
+        "deadline": false,
+        "team_size": false
+      },
+      "judge_quality": 0.15,
+      "had_distractor": true
+    },
+    {
+      "task_id": 2,
+      "agent_name": "rag_baseline",
+      "subquestion_input_tokens": [
+        278,
+        265
+      ],
+      "subquestion_output_tokens": [
+        33,
+        23
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          82,
+          81,
+          164,
+          80,
+          84
+        ],
+        [
+          160,
+          4,
+          84,
+          199,
+          195
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n- Your financial advisor is **Jean Martin**.\n- You save **1,200 EUR** each month.",
+        "Based on the context, your investments go through **DeGiro** (your broker for trading)."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "advisor": true,
+        "broker": true,
+        "monthly_savings": true
+      },
+      "facts_found_judge": {
+        "advisor": true,
+        "broker": true,
+        "monthly_savings": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 3,
+      "agent_name": "rag_baseline",
+      "subquestion_input_tokens": [
+        294,
+        281
+      ],
+      "subquestion_output_tokens": [
+        37,
+        26
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          120,
+          122,
+          121,
+          128,
+          131
+        ],
+        [
+          121,
+          123,
+          124,
+          44,
+          120
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n- **Title**: *Navigation in Latent Spaces*\n- **Conference**: **NeurIPS 2024**",
+        "Based on the provided context:\n\n- **Year:** 2024\n- **First author:** Tolman"
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "paper_title": true,
+        "year": true,
+        "conference": true,
+        "first_author": true
+      },
+      "facts_found_judge": {
+        "paper_title": true,
+        "year": true,
+        "conference": true,
+        "first_author": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    }
+  ],
+  "rag_with_history": [
+    {
+      "task_id": 0,
+      "agent_name": "rag_with_history",
+      "subquestion_input_tokens": [
+        295,
+        453
+      ],
+      "subquestion_output_tokens": [
+        44,
+        59
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          4,
+          0,
+          5,
+          8,
+          6
+        ],
+        [
+          1,
+          120,
+          122,
+          121,
+          4
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n- **Deadline**: The Project Alpha deadline is **2026-06-15**.\n- **Technologies**: Project Alpha uses **Python** and **FastAPI**.",
+        "Based on the provided context:\n\n- **Budget**: There is **no information** about the budget in the provided context.\n- **Who is leading it**: Based on the prior conversation (which was about **Project Alpha**), the lead is **Marie Dupont**."
+      ],
+      "distractor_input_tokens": [
+        390
+      ],
+      "distractor_output_tokens": [
+        50
+      ],
+      "quality_score": 0.75,
+      "facts_found_symbolic": {
+        "deadline": true,
+        "budget": false,
+        "tech_stack": true,
+        "lead": true
+      },
+      "facts_found_judge": {
+        "deadline": true,
+        "budget": false,
+        "tech_stack": true,
+        "lead": true
+      },
+      "judge_quality": 0.75,
+      "had_distractor": true
+    },
+    {
+      "task_id": 1,
+      "agent_name": "rag_with_history",
+      "subquestion_input_tokens": [
+        276,
+        486
+      ],
+      "subquestion_output_tokens": [
+        99,
+        68
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          41,
+          53,
+          47,
+          45,
+          54
+        ],
+        [
+          42,
+          41,
+          1,
+          81,
+          121
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n**Client:** The client for Project Beta is **Acme Corp**, as confirmed in Node 41 and noted in the latest review.\n\n**Deadline:** The context does **not** contain any information about a deadline for Project Beta. The routine updates (Nodes 45, 47, 53, 54) mention only general discussions, follow-ups, and scheduling, with no specific dates or deadlines reported.",
+        "The question \"What is the current status?\" is too vague to answer \u2014 there is no information in the provided context about a \"current status\" for any project.\n\nAs for **how many engineers are on the team**, based on **Node 42**, Project Beta has **7 engineers** on the team."
+      ],
+      "distractor_input_tokens": [
+        413
+      ],
+      "distractor_output_tokens": [
+        50
+      ],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "client": true,
+        "status": false,
+        "deadline": false,
+        "team_size": true
+      },
+      "facts_found_judge": {
+        "client": true,
+        "status": false,
+        "deadline": false,
+        "team_size": true
+      },
+      "judge_quality": 0.5,
+      "had_distractor": true
+    },
+    {
+      "task_id": 2,
+      "agent_name": "rag_with_history",
+      "subquestion_input_tokens": [
+        296,
+        355
+      ],
+      "subquestion_output_tokens": [
+        42,
+        24
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          82,
+          81,
+          164,
+          80,
+          84
+        ],
+        [
+          82,
+          81,
+          84,
+          160,
+          4
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n- Your financial advisor is **Jean Martin** (Node 81).\n- You save **1,200 EUR** each month (Node 82).",
+        "Based on the provided context, you make your investments through **DeGiro** (Node 84)."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "advisor": true,
+        "broker": true,
+        "monthly_savings": true
+      },
+      "facts_found_judge": {
+        "advisor": true,
+        "broker": true,
+        "monthly_savings": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 3,
+      "agent_name": "rag_with_history",
+      "subquestion_input_tokens": [
+        312,
+        380
+      ],
+      "subquestion_output_tokens": [
+        45,
+        31
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          120,
+          122,
+          121,
+          128,
+          131
+        ],
+        [
+          121,
+          120,
+          122,
+          123,
+          124
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n- The title of the ML research paper is **\"Navigation in Latent Spaces\"**.\n- It was presented at **NeurIPS 2024**.",
+        "Based on the provided context:\n\n- The paper was published in **2024**.\n- The first author is **Tolman**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "paper_title": true,
+        "year": true,
+        "conference": true,
+        "first_author": true
+      },
+      "facts_found_judge": {
+        "paper_title": true,
+        "year": true,
+        "conference": true,
+        "first_author": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    }
+  ],
+  "tinm_lite": [
+    {
+      "task_id": 0,
+      "agent_name": "tinm_lite",
+      "subquestion_input_tokens": [
+        277,
+        303
+      ],
+      "subquestion_output_tokens": [
+        44,
+        39
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          4,
+          0,
+          5,
+          8,
+          6
+        ],
+        [
+          1,
+          121,
+          2,
+          120,
+          122
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n- **Deadline**: Project Alpha's deadline is **2026-06-15**.\n- **Technologies**: Project Alpha uses **Python** and **FastAPI**.",
+        "Based on the context:\n\n- **Budget**: 120,000 EUR (for Project Alpha)\n- **Lead**: **Marie Dupont** is leading Project Alpha"
+      ],
+      "distractor_input_tokens": [
+        310
+      ],
+      "distractor_output_tokens": [
+        37
+      ],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "deadline": true,
+        "budget": true,
+        "tech_stack": true,
+        "lead": true
+      },
+      "facts_found_judge": {
+        "deadline": true,
+        "budget": true,
+        "tech_stack": true,
+        "lead": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": true
+    },
+    {
+      "task_id": 1,
+      "agent_name": "tinm_lite",
+      "subquestion_input_tokens": [
+        258,
+        288
+      ],
+      "subquestion_output_tokens": [
+        57,
+        50
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          41,
+          53,
+          47,
+          45,
+          54
+        ],
+        [
+          42,
+          1,
+          81,
+          121,
+          82
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n**Client:** The client for Project Beta is **Acme Corp**, as confirmed in the latest review (Node 41).\n\n**Deadline:** The deadline for Project Beta is **not mentioned** anywhere in the provided context.",
+        "Based on the provided context, there are **7 engineers** on the team (Project Beta).\n\nHowever, regarding \"current status,\" no status information is mentioned in the context \u2014 only the team size is specified for Project Beta."
+      ],
+      "distractor_input_tokens": [
+        286
+      ],
+      "distractor_output_tokens": [
+        32
+      ],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "client": true,
+        "status": false,
+        "deadline": false,
+        "team_size": true
+      },
+      "facts_found_judge": {
+        "client": true,
+        "status": false,
+        "deadline": false,
+        "team_size": true
+      },
+      "judge_quality": 0.5,
+      "had_distractor": true
+    },
+    {
+      "task_id": 2,
+      "agent_name": "tinm_lite",
+      "subquestion_input_tokens": [
+        278,
+        278
+      ],
+      "subquestion_output_tokens": [
+        33,
+        21
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          82,
+          81,
+          164,
+          80,
+          84
+        ],
+        [
+          82,
+          160,
+          4,
+          84,
+          81
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n- Your financial advisor is **Jean Martin**.\n- You save **1,200 EUR** each month.",
+        "Based on the context, your investments go through **DeGiro** (your broker)."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "advisor": true,
+        "broker": true,
+        "monthly_savings": true
+      },
+      "facts_found_judge": {
+        "advisor": true,
+        "broker": true,
+        "monthly_savings": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 3,
+      "agent_name": "tinm_lite",
+      "subquestion_input_tokens": [
+        294,
+        295
+      ],
+      "subquestion_output_tokens": [
+        37,
+        26
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          120,
+          122,
+          121,
+          128,
+          131
+        ],
+        [
+          121,
+          120,
+          122,
+          123,
+          124
+        ]
+      ],
+      "responses": [
+        "Based on the provided context:\n\n- **Title:** *Navigation in Latent Spaces*\n- **Conference:** **NeurIPS 2024**",
+        "Based on the provided context:\n\n- **Year:** 2024\n- **First author:** Tolman"
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "paper_title": true,
+        "year": true,
+        "conference": true,
+        "first_author": true
+      },
+      "facts_found_judge": {
+        "paper_title": true,
+        "year": true,
+        "conference": true,
+        "first_author": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    }
+  ]
+}

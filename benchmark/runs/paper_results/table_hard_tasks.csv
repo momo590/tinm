@@ -1,0 +1,17 @@
+benchmark,agent,n_ge_50,n_ge_75,pct_ge_50
+continuity,rag_baseline,44,30,88.0
+continuity,rag_with_history,45,27,90.0
+continuity,tinm_a085,44,33,88.0
+continuity,tinm_adapt,45,31,90.0
+shift,rag_baseline,48,31,96.0
+shift,rag_with_history,49,37,98.0
+shift,tinm_a085,48,31,96.0
+shift,tinm_adapt,48,37,96.0
+musique_2hop,rag_baseline,10,2,20.0
+musique_2hop,rag_with_history,12,4,24.0
+musique_2hop,tinm_a085,12,5,24.0
+musique_2hop,tinm_adapt,12,6,24.0
+musique_3hop,rag_baseline,6,6,12.0
+musique_3hop,rag_with_history,6,1,12.0
+musique_3hop,tinm_a085,10,3,20.0
+musique_3hop,tinm_adapt,7,4,14.0
