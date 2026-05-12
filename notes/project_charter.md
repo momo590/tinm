@@ -7,12 +7,14 @@ project. Read this *after* `conventions.md` and `experimental_roadmap.md`.
 
 ## ⮕ NEXT FOCUS (maintained at the end of every major session)
 
-**Last updated**: 2026-05-12 (end of session 3 — paper-1 polish first
-pass: BibTeX entries in `paper/draft.md`, Figure 1 rendered via
-`paper/figures/make_fig1.py` (matplotlib turned out to install fine on
-this env, contrary to the prior session's belief), §5.3 + §2 + status
-header tightened. L1 activation threshold shipped in `tinm_lite.py`
-behind a default-off flag and mentioned in §6.5).
+**Last updated**: 2026-05-13 (end of session 4 — BibTeX verified
+against DBLP/Semantic Scholar with 6 corrections applied; MVP scaffold
+written and dogfooded: PCP v0 spec (`mvp/pcp_v0_spec.md`), Claude Code
+skill (`mvp/skill/`), dedicated venv at `~/.tinm/.venv` with
+sentence-transformers (Py 3.9 needed, numpy pinned <2 for torch ABI
+compat). End-to-end test passed on a dogfood thread
+`tinm-paper-polish`: 4 turns exercising L1 + adaptive EMA, 2 artifacts
+registered, 3 find queries verifying substring + embedding lookup).
 
 The natural next steps, in suggested priority order. The agent should
 propose this as the default starting point at session start, but the user
@@ -30,13 +32,20 @@ owns the decision.
      reads it through.
    - Upload arXiv preprint when the BibTeX is verified.
 
-2. **Start MVP skill prototype** (separate from paper polish, weekend
-   side-track). Cross-session continuity Claude skill, file-based PCP v0,
-   no cloud. Targeted at the user's own daily workflow first. The
-   activation-threshold L1 fix is already in the repo
-   (`tinm_lite.py::activation_threshold=True`) — the MVP should enable
-   it. L4 (parallel conversation index) is the next MVP-must-have to
-   build.
+2. **MVP skill — next moves now that v0.1 ships**:
+   - Install the skill locally and start using it on real work
+     (`ln -s /Users/user/TNIM/mvp/skill ~/.claude/skills/tinm`,
+     then `/tinm load tinm-paper-polish` to resume).
+   - Validate the PCP v0 contract with a *second* client (the v0.1
+     acceptance test from `pcp_v0_spec.md` §6). Likely candidate: a
+     small MCP server that exposes the same `~/.tinm/threads/`
+     directory to Claude.ai. Once a second client reads/writes the
+     same thread cleanly, v0.1 is validated and v0.2 can begin.
+   - Address known v0.1 gaps: anaphora regex is English-only (the user
+     mixes FR/EN), the OpenSSL warning on the venv is cosmetic but
+     noisy, the model load latency (~2s) per script invocation is fine
+     for `/tinm load` but heavy if called on every turn — a Python
+     daemon sidecar would amortise.
 
 3. **Future research follow-ups** — not for this session, but listed in
    the experimental roadmap (§L1–L4): multi-turn friction detection (now
@@ -115,8 +124,9 @@ The companion documents:
 | BibTeX references | ✓ inlined at end of `paper/draft.md` — needs verification pass |
 | Figure 1 (matplotlib) | ✓ `paper/figures/fig1_pareto.{pdf,png}` (regen via `make_fig1.py`) |
 | L1 activation threshold (MVP fix) | ✓ shipped in `tinm_lite.py` behind default-off flag |
-| MVP skill | not started |
-| PCP v0 spec | not started |
+| **PCP v0 spec** | ✓ `mvp/pcp_v0_spec.md` (file-based JSON, single-user, deferred features in §5) |
+| **MVP skill (Claude Code)** | ✓ written + dogfooded; install: `ln -s …/mvp/skill ~/.claude/skills/tinm` + `~/.tinm/.venv` with `numpy<2` pin |
+| L4 conversation index (MVP feature) | ✓ shipped in `mvp/skill/tinm_artifact.py` (substring + embedding fallback) |
 
 ## 4. Open strategic decisions (await user input)
 

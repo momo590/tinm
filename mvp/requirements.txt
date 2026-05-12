@@ -1,2 +1,5 @@
 sentence-transformers>=2.5,<4
-numpy>=1.24
+# numpy<2 because torch 2.2 (the wheel sentence-transformers pulls on Py 3.9)
+# is built against the numpy 1.x ABI; numpy 2.x raises "Numpy is not available"
+# at encode() time.
+numpy>=1.24,<2
