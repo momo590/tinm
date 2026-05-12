@@ -38,6 +38,17 @@ manifesto already cite many of these — they can be reused.
 - **Wang et al. 2023 (Voyager)** | *Skill library for LLM agents in Minecraft*
   | Long-term memory as accumulated skills. Different problem (skill reuse
     vs context retrieval), useful as a contrast.
+- **Google Research 2025 (ReasoningBank)** | *Cross-task lesson extraction
+    via LLM-as-judge after agent trajectories*
+  | Complementary time scale to TINM. ReasoningBank operates between tasks
+    (distill generalizable lessons from completed work, retrieve at start
+    of next task); TINM operates within a task (compressed state across
+    turns). Stacking is plausible: lessons as long-term priors over
+    session-scoped anchors. Cite as concurrent complementary direction;
+    proper citation (authors, arXiv ID) TODO.
+  | Blog post: https://research.google/blog/reasoningbank-enabling-agents-to-learn-from-experience/
+  | Reported numbers: +8.3% WebArena, +4.6% SWE-Bench-Verified, ~3 fewer
+    execution steps; base model Gemini-2.5-Flash.
 
 ## C. Successor Representations and Predictive Memory
 

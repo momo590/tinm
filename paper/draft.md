@@ -112,6 +112,15 @@ content. Self-RAG (Asai et al., 2023) modulates retrieval via reflection
 tokens, which is complementary; IRCoT (Trivedi et al., 2022) interleaves
 retrieval with chain-of-thought reasoning at sub-turn granularity, which
 operates inside a single user query rather than across them.
+Concurrent work on cross-task lesson extraction (*ReasoningBank*; Google
+Research, 2025) operates at a complementary time scale: it distills
+generalizable reasoning patterns from completed agent trajectories via
+LLM-as-judge and retrieves them at the start of subsequent tasks. TINM
+addresses the within-task memory regime (state across turns of a single
+task), while ReasoningBank addresses the between-task regime (lessons
+across tasks). The two mechanisms are orthogonal and could be stacked,
+with ReasoningBank's lessons serving as long-term priors over TINM's
+session-scoped anchor; we leave this combination to future work.
 
 **Predictive memory in neuroscience and reinforcement learning.** The
 Successor Representation (Dayan, 1993) provides a formal substrate for

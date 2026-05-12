@@ -140,6 +140,39 @@ that can proceed in parallel.
 
 ---
 
+## Related but orthogonal: ReasoningBank (Google Research, 2025)
+
+Surfaced during session 2 (2026-05-12). ReasoningBank is a concurrent line
+of work that addresses a *complementary* memory regime: instead of state
+within a task (TINM's domain), it distills *transferable lessons* across
+tasks via LLM-as-judge extraction after each task completion. Reported
+gains: +8.3% on WebArena and +4.6% on SWE-Bench.
+
+**Verdict for the TINM paper**: cite in Related Work, no integration.
+Our benchmarks (MuSiQue 2/3-hop, synthetic continuity) have each task as
+independent — there is no cross-task pattern for ReasoningBank to learn.
+Integrating would require redesigning benchmarks to have repeated/related
+tasks (WebArena/SWE-Bench style), at which point we're writing a different
+paper. The current TINM paper has a clean within-task message and should
+not be diluted.
+
+**Verdict for the MVP skill**: ReasoningBank-style lesson extraction is
+a strong candidate for a future product feature (probably MVP v2). At
+the end of a work session, an LLM-as-judge pass extracts portable
+lessons ("when working on Project Alpha, always check the deadline
+node first"); subsequent sessions retrieve these as long-term priors
+that sit above the per-session TINM anchor. The three time scales
+(per-query retrieval, per-session TINM anchor, cross-session lessons)
+correspond to the hierarchy of resolution described in the substrate
+doc §1.3.
+
+**Verdict for a future TINM v3 / paper 2**: combining within-task TINM
+with cross-task lessons is a natural follow-up paper. Likely benchmark:
+WebArena or SWE-Bench (long trajectories with repeated patterns).
+Not before the current TINM paper is published.
+
+---
+
 ## Configuration constants (for reproducibility)
 - Seed: 42 everywhere (graph, tasks, distractor injection)
 - LLM: claude-sonnet-4-6 (Sonnet 4.6)
