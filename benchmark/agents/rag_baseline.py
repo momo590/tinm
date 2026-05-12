@@ -27,7 +27,7 @@ class RAGBaselineAgent:
         self.top_k = top_k
         self.model = model
         self.max_tokens = max_tokens
-        self.client = anthropic.Anthropic()
+        self.client = anthropic.Anthropic(max_retries=8)
 
         embeddings = np.stack([n.embedding for n in nodes])
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)

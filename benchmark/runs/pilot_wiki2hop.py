@@ -1,12 +1,13 @@
-"""Pilot on real data: MuSiQue 2-hop QA.
+"""Pilot on 2WikiMultihopQA — a second real-data benchmark alongside MuSiQue.
 
-Tests whether the TNIM-lite v2 mechanism (friction-adaptive memory) transfers
-from synthetic to real text. Each MuSiQue example provides a natural continuity
-test: Q1 establishes a bridge entity, Q2 is anaphoric ("its X").
+Validates that the TNIM-lite v2 mechanism transfers across multi-hop QA
+datasets. 2Wiki provides explicit (subj, rel, obj) evidence triplets,
+giving a cleaner decomposition signal than MuSiQue's free-form Wikidata
+references.
 
 Usage:
-    .venv/bin/python -m runs.pilot_real --smoke   # 4 tasks (~$0.30)
-    .venv/bin/python -m runs.pilot_real           # 50 tasks (~$5-6)
+    .venv/bin/python -m runs.pilot_wiki2hop --smoke   # 4 tasks (~$0.30)
+    .venv/bin/python -m runs.pilot_wiki2hop           # 50 tasks (~$5-6)
 """
 import argparse
 import json
@@ -18,28 +19,25 @@ from dataclasses import asdict
 from pathlib import Path
 
 import anthropic
-import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agents.base import Turn
 from config import Config
 from env.encoder import TfidfEncoder
-from env.musique_loader import load_musique_benchmark
-from eval.metrics import SessionMetrics
-from runs.pilot import TurnSpec, run_agent_on_task
+from env.wiki2hop_loader import load_wiki2hop_benchmark
+from runs.pilot import run_agent_on_task
 from runs.pilot_v2 import _per_agent_stats, build_shift_turn_sequence, make_agents
 
 
-def run(cfg: Config, n_tasks: int = 50, n_hops: int = 2, smoke: bool = False):
+def run(cfg: Config, n_tasks: int = 50, smoke: bool = False):
     if smoke:
         n_tasks = 4
 
     print(f"[1/4] Initializing encoder...")
     encoder = TfidfEncoder()
 
-    print(f"[2/4] Loading MuSiQue {n_hops}-hop ({n_tasks} examples)...")
-    graph, tasks = load_musique_benchmark(encoder, n_tasks=n_tasks, n_hops=n_hops, seed=cfg.seed)
+    print(f"[2/4] Loading 2WikiMultihopQA ({n_tasks} examples)...")
+    graph, tasks = load_wiki2hop_benchmark(encoder, n_tasks=n_tasks, seed=cfg.seed)
     print(f"      Graph: {len(graph.nodes)} unique paragraphs")
     print(f"      Tasks: {len(tasks)}")
     avg_gold = statistics.mean(len(t.gold_path) for t in tasks)
@@ -52,13 +50,13 @@ def run(cfg: Config, n_tasks: int = 50, n_hops: int = 2, smoke: bool = False):
     agents = make_agents(graph.nodes, encoder, cfg)
     judge_client = anthropic.Anthropic(max_retries=8)
 
-    results = {"musique_2hop": {name: [] for name in agents}}
+    results = {"wiki2hop": {name: [] for name in agents}}
     t0 = time.time()
     for agent_name, agent in agents.items():
         print(f"\n  --- {agent_name} ---")
         for i, (task, ts) in enumerate(zip(tasks, turn_seqs)):
             m = run_agent_on_task(agent, task, ts, encoder, judge_client, cfg.judge_model)
-            results["musique_2hop"][agent_name].append(m)
+            results["wiki2hop"][agent_name].append(m)
             print(
                 f"    [{i + 1:>3}/{len(tasks)}] q={m.quality_score:.2f} "
                 f"tok={m.task_input_tokens}+{m.task_output_tokens}"
@@ -67,7 +65,7 @@ def run(cfg: Config, n_tasks: int = 50, n_hops: int = 2, smoke: bool = False):
     elapsed = time.time() - t0
     print(f"\nDone in {elapsed:.1f}s")
     print()
-    _per_agent_stats(results["musique_2hop"])
+    _per_agent_stats(results["wiki2hop"])
     return results
 
 
@@ -93,12 +91,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke", action="store_true", help="Run 4 tasks only")
     parser.add_argument("--n", type=int, default=50, help="Number of tasks for full run")
-    parser.add_argument("--hops", type=int, default=2, help="MuSiQue chain length (2, 3, or 4)")
     parser.add_argument(
         "--out",
         type=Path,
         default=None,
-        help="Output path (defaults to runs/pilot_real_results_{hops}hop.json)",
+        help="Output path (defaults to runs/pilot_wiki2hop_results.json)",
     )
     args = parser.parse_args()
 
@@ -107,12 +104,10 @@ def main() -> None:
         sys.exit(1)
 
     if args.out is None:
-        args.out = Path(__file__).resolve().parent / f"pilot_real_results_{args.hops}hop.json"
+        args.out = Path(__file__).resolve().parent / "pilot_wiki2hop_results.json"
 
     cfg = Config()
-    results = run(cfg, n_tasks=args.n, n_hops=args.hops, smoke=args.smoke)
-    # Rename top-level key to reflect hops
-    results = {f"musique_{args.hops}hop": results.pop("musique_2hop")}
+    results = run(cfg, n_tasks=args.n, smoke=args.smoke)
     _save_results(results, args.out)
 
 
