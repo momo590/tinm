@@ -7,7 +7,7 @@ __pycache__/
 *.egg
 .venv/
 venv/
-env/
+/env/
 .python-version
 
 # Secrets and local config
