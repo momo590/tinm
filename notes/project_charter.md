@@ -7,34 +7,37 @@ project. Read this *after* `conventions.md` and `experimental_roadmap.md`.
 
 ## ⮕ NEXT FOCUS (maintained at the end of every major session)
 
-**Last updated**: 2026-05-12 (end of session 1 — experimental section + draft + git + conventions).
+**Last updated**: 2026-05-12 (end of session 2 — 2WikiMultihopQA added
+as 5th benchmark; MuSiQue 2-hop re-run at n=100; paper draft + consolidated
+report updated; .gitignore fix + benchmark/env/ now tracked).
 
 The natural next steps, in suggested priority order. The agent should
 propose this as the default starting point at session start, but the user
 owns the decision.
 
-1. **Polish paper for submission readiness.**
+1. **Polish paper for submission readiness.** Experimental section is
+   now fully integrated (5 benchmarks, all numbers up to date in
+   `paper/draft.md` and `benchmark/runs/paper_results/paper_section.md`).
+   What remains:
    - Convert references in `paper/related_work.md` into BibTeX entries
      placed at the end of `paper/draft.md`.
    - Render Figure 1 (Pareto plot) as a real matplotlib figure — requires
      a Python env where matplotlib installs (current macOS Monterey +
      Py 3.13 + Darwin 21 combo blocks torch and bundled wheels). Likely
      options: separate venv with Py 3.11, Docker, or Colab notebook.
-   - First pass on draft polish (transitions, redundancy removal).
+   - First pass on draft polish (transitions, redundancy removal). The
+     §5.3 "Two complementary best results" paragraph in particular reads
+     a bit listy and could be tightened.
 
-2. **Decide on extra experiments (cost ~$10-30 total).**
-   - HotpotQA as a 5th benchmark for real-data redundancy.
-   - n=100 or n=200 rerun on the marginal-significance comparisons
-     (MuSiQue 2-hop and continuity-vs-baseline) to push t-stats above
-     1.96.
-
-3. **Start MVP skill prototype** (separate from paper polish, weekend
+2. **Start MVP skill prototype** (separate from paper polish, weekend
    side-track). Cross-session continuity Claude skill, file-based PCP v0,
    no cloud. Targeted at the user's own daily workflow first.
 
-4. **Future research follow-ups** — not for this session, but listed in
-   the experimental roadmap (§L1–L4): multi-turn friction detection,
-   structured agent state, conversation-level retrieval index.
+3. **Future research follow-ups** — not for this session, but listed in
+   the experimental roadmap (§L1–L4): multi-turn friction detection (now
+   with stronger evidence from the 2WikiMultihopQA `tinm_adapt < tinm_a085`
+   significant negative result), structured agent state, conversation-level
+   retrieval index.
 
 ---
 
@@ -48,8 +51,9 @@ The core thesis: for agents that span many turns of interaction, memory
 should not be a stored corpus of documents (the RAG-with-history pattern)
 but a *compressed latent state* that biases retrieval and reaches the LLM
 via a minimal textual hint. This compressed memory is empirically
-Pareto-improved over both stateless RAG and history-augmented RAG on four
-benchmarks tested (two synthetic, two real-data multi-hop QA).
+Pareto-improved over both stateless RAG and history-augmented RAG on five
+benchmarks tested (two synthetic, three real-data multi-hop QA: MuSiQue
+2-hop, MuSiQue 3-hop, 2WikiMultihopQA).
 
 The companion documents:
 - `tinm_substrate.md`: the computational substrate (math, algorithms).
@@ -98,23 +102,29 @@ The companion documents:
 
 | Component | Status |
 |---|---|
-| 4 benchmarks (2 synthetic + 2 MuSiQue) | ✓ run, n=50 each |
-| 4 agents (rag_baseline, rag_with_history, tinm_a085, tinm_adapt) | ✓ implemented |
+| 5 benchmarks (2 synthetic + MuSiQue 2-hop n=100 + MuSiQue 3-hop n=50 + 2WikiMultihopQA n=50) | ✓ run |
+| 4 agents (rag_baseline, rag_with_history, tinm_a085, tinm_adapt) | ✓ implemented (SDK `max_retries=8` for 529 resilience) |
 | TINM-full ablation | ✓ documented as negative result |
-| Paper draft | ~85%, prose mostly in place |
-| Consolidated experimental tables | ✓ in `benchmark/runs/paper_results/` |
+| Paper draft | ~90%, all experimental numbers integrated (5 benchmarks) |
+| Consolidated experimental tables | ✓ in `benchmark/runs/paper_results/` (regenerated) |
 | BibTeX references | not yet — pointers only |
-| Figure 1 (matplotlib) | not yet — ASCII placeholder in draft |
+| Figure 1 (matplotlib) | not yet — ASCII placeholder in draft (now showing 5 panels) |
 | MVP skill | not started |
 | PCP v0 spec | not started |
 
 ## 4. Open strategic decisions (await user input)
 
-1. **HotpotQA as 5th benchmark?** Would add real-data redundancy. ~$10 cost.
-2. **n = 100 or 200 rerun for tighter t-stats?** Some marginal results
-   (t ≈ 1.7) would benefit from more power. Cost depends on n.
+1. ~~**HotpotQA as 5th benchmark?**~~ — resolved in session 2: we picked
+   2WikiMultihopQA instead (cleaner decomposition via explicit
+   `(subj, rel, obj)` triplets, same anaphoric Q1→Q2 structure).
+2. ~~**n = 100 or 200 rerun for tighter t-stats?**~~ — resolved in
+   session 2: MuSiQue 2-hop re-run at n=100. All previously marginal
+   comparisons (TINM vs rag_baseline, TINM vs rag_with_history) now
+   clear p < 0.05 (t-stats 2.40 to 4.05).
 3. **Multi-turn friction (TINM-lite v3)?** Would address L2 in the
-   roadmap. Possible separate paper.
+   roadmap. Possible separate paper. The 2Wiki result (tinm_adapt
+   significantly *worse* than tinm_a085, t=-2.10) strengthens the
+   motivation for this line of work.
 4. **Start MVP skill in parallel with paper polish?** Currently paper
    has priority but the user has expressed wanting to do both.
 

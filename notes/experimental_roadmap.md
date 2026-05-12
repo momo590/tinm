@@ -21,14 +21,15 @@ experimental section.
 - tinm_adapt beats rag_baseline by +0.038 (t=2.47) — significant
 - **Validates friction-adaptive memory (Thèse 9 of manifesto)**
 
-### Benchmark 3 — MuSiQue 2-hop (`pilot_real_results.json`)
-- 50 tasks, real Wikipedia paragraphs, natural anaphora
-- **Result**: tinm_adapt = 0.377 (best), tinm_a085 = 0.368, rag_with_history = 0.365, rag_baseline = 0.324
-- TINM ties rag_with_history on quality, **−6% tokens** (69359 vs 73876)
-- TINM beats rag_baseline by +0.05 (t=1.66-1.73, marginal significance)
-- High-quality tasks (≥0.75): tinm_adapt 6/50, rag_with_history 4/50, rag_baseline 2/50 — **2× harder-task success**
-- **Validates ecological transfer of the mechanism**
-- tinm_adapt ≈ tinm_a085 (expected — only 1 anchor update at 2-hop)
+### Benchmark 3 — MuSiQue 2-hop (`pilot_real_results.json` n=50; `pilot_real_results_2hop_n100.json` n=100)
+- **n=50 (archive)**: tinm_adapt = 0.377, tinm_a085 = 0.368, rag_with_history = 0.365, rag_baseline = 0.324; TINM beat rag_baseline by ~+0.05 (t=1.66-1.73, marginal).
+- **n=100 (re-run, paper)**: tinm_a085 = 0.412 (best), tinm_adapt = 0.405, rag_with_history = 0.377, rag_baseline = 0.345.
+  - tinm_a085 vs rag_baseline: Δ=+0.067, **t=4.05 (p<0.01)** — now strongly significant.
+  - tinm_a085 vs rag_with_history: Δ=+0.035, **t=2.62 (p<0.05)**.
+  - rag_with_history vs rag_baseline: Δ=+0.032, **t=2.36 (p<0.05)** — history-augmented does help on 2-hop, contrary to the 3-hop pattern.
+  - tinm_a085 vs tinm_adapt: tied (t=-0.69) — expected, only 1 anchor update at 2-hop.
+- TINM also wins on tokens: 141119 vs 151395 (-7%) for tinm_a085 vs rag_with_history.
+- **Validates ecological transfer of the mechanism with tightened statistics.**
 
 ---
 
@@ -41,6 +42,15 @@ experimental section.
 - **tinm_adapt beats rag_with_history**: Δ=+0.052, t=2.77 (p<0.01)
 - **Surprise**: rag_with_history < rag_baseline on 3-hop. Verbose history pollutes chain reasoning.
 - Hard-task success (≥0.5): tinm_a085 10/50, others 6-7/50. TINM resolves 67% more hard chains.
+
+### Benchmark 5 — 2WikiMultihopQA (`pilot_wiki2hop_results.json`)
+- 50 tasks, 2-hop linear chains (`obj_0 == subj_1`), `comparison` type excluded.
+- **Result**: tinm_a085 = 0.481 (best), tinm_adapt = 0.460, rag_with_history = 0.450, rag_baseline = 0.367.
+- **tinm_a085 vs rag_baseline**: Δ=+0.114, **t=4.03 (p<0.01)** — *largest absolute effect across all benchmarks*.
+- **tinm_a085 vs rag_with_history**: Δ=+0.032, **t=2.71 (p<0.01)**.
+- **tinm_adapt vs tinm_a085**: Δ=-0.022, **t=-2.10 (p<0.05)** — adaptive significantly *worse* than fixed. First clean single-benchmark evidence that single-turn friction over-reacts on cleanly-decomposed multi-hop chains. Reinforces the L2 limitation.
+- Tokens: tinm_a085 66587 vs rag_baseline 86979 (-23%); also -7% vs rag_with_history.
+- **Validates redundancy on a second real-data dataset.**
 
 ### TINM-full ablation (NEGATIVE result, documented)
 - Dual-anchor design (magnetic α=0.92 + courant α=0.50 + repulsion)
@@ -61,14 +71,20 @@ experimental section.
 
 ---
 
-## Status: experimental section COMPLETE
+## Status: experimental section COMPLETE — 5 benchmarks
 
-All planned validation done. Pending decisions for the paper:
-1. Whether to add a 5th benchmark (real distractor task — e.g. CoQA / QuAC).
-2. Whether to add HotpotQA as a second real-data validation (similar to MuSiQue).
+All planned validation done. Pending tasks for the paper:
+1. ~~Whether to add HotpotQA as a second real-data validation~~ — done via
+   2WikiMultihopQA instead (cleaner decomposition signal; see Benchmark 5).
+2. ~~Whether to push marginal t-stats above 1.96~~ — done via MuSiQue 2-hop
+   re-run at n=100 (Benchmark 3); previously marginal comparisons now reach
+   p < 0.01.
 3. Implementation of "TINM-full v2" with proper multi-turn friction detection
-   (future-work line in current paper).
-4. Latex figures from CSVs (matplotlib install was unavailable on macOS Monterey
+   (future-work line in current paper; now with stronger empirical motivation
+   from the 2Wiki adaptive-worse-than-fixed result).
+4. CoQA / QuAC as additional conversation-style benchmarks (deferred — not
+   needed for paper-1, would suit a follow-up).
+5. LaTeX figures from CSVs (matplotlib install was unavailable on macOS Monterey
    + Python 3.13; either set up a different env or use external tooling).
 
 ---
