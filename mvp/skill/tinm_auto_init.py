@@ -1,18 +1,23 @@
-"""Best-effort auto-creation of a PCP v0 thread at session start.
+"""Best-effort auto-routing of the current PCP v0 thread at session start.
 
 Goal: zero friction for the user — they should never have to type
-`/tinm init` for a new project. The SessionStart hook calls this script,
-which:
+`/tinm init`, AND switching projects (changing `cwd` between sessions)
+must auto-switch the current thread. Without this, the previous
+project's `current_thread` lingers and Claude loads the wrong context
+on a new project. The SessionStart hook calls this script, which:
 
-  1. If `current_thread` is already set on this host, do nothing.
-  2. Else, if the current working directory is inside a git repo, scan
-     `$TINM_PCP_DIR/threads/*.json` for a thread whose
-     `metadata.project_root` matches this repo's toplevel; if found,
-     mark it current.
-  3. Else, slug-ify `basename($PWD-or-git-toplevel)`, init a new thread,
-     and mark it current.
-  4. If we are not in a git repo, exit silently — auto-init only kicks
-     in for "real" projects.
+  1. Determine `project_root` = `git rev-parse --show-toplevel` for the
+     current working directory. If we are not in a git repo, leave
+     `current_thread` untouched (no thread for this session).
+  2. Scan `$TINM_PCP_DIR/threads/*.json` for a thread whose
+     `metadata.project_root` matches. If found, mark it current.
+  3. Else, slug-ify `basename(project_root)`, init a new thread with
+     that slug, and mark it current.
+
+Note: this DOES overwrite a previously-set `current_thread` if the
+current `cwd` resolves to a different project. The task-per-project
+model is per the paper §3.2 ("State is reset on every new task") — a
+new project is a new task is a new thread.
 
 The script is silent on success and on every benign no-op. Errors go to
 stderr but exit code is always 0 — the SessionStart hook must keep the
@@ -72,41 +77,62 @@ def _find_thread_for_project(project_root: str) -> str | None:
     return None
 
 
-def _current_thread_set() -> bool:
+def _current_thread() -> str | None:
     if not CURRENT_FILE.exists():
-        return False
-    return bool(CURRENT_FILE.read_text().strip())
+        return None
+    s = CURRENT_FILE.read_text().strip()
+    return s or None
+
+
+def _set_current(thread_id: str) -> None:
+    CURRENT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CURRENT_FILE.write_text(thread_id + "\n")
 
 
 def auto_init() -> str | None:
-    """Run the auto-init policy. Returns the thread_id that ended up
+    """Run the auto-routing policy. Returns the thread_id that ended up
     current, or None if nothing was done.
-    """
-    if _current_thread_set():
-        return None
 
+    Re-runs on every SessionStart. The `current_thread` marker is
+    overwritten whenever the cwd's project_root no longer matches the
+    thread referenced by `current_thread`. This is intentional — a new
+    project is a new task is a new thread (paper §3.2).
+    """
     project_root = _git_toplevel()
     if not project_root:
+        # Not in a git repo: nothing to auto-route to. We do NOT clear
+        # current_thread here — the user may have set it explicitly via
+        # `/tinm load` and we should not erase that just because they
+        # cd'd somewhere non-git.
         return None
 
-    # (a) Match by project_root → reuse existing thread
+    # (a) Match by project_root → reuse the existing thread for this project
     existing = _find_thread_for_project(project_root)
     if existing:
-        CURRENT_FILE.parent.mkdir(parents=True, exist_ok=True)
-        CURRENT_FILE.write_text(existing + "\n")
+        if _current_thread() != existing:
+            _set_current(existing)
         return existing
 
-    # (b) Otherwise, derive a slug from basename
+    # (b) No thread for this project yet — derive a slug from basename,
+    #     create a fresh thread, mark it current. This is the "new
+    #     project, never seen before" path.
     basename = os.path.basename(project_root)
     slug = _slugify(basename)
     if not slug or not SLUG_RE.match(slug):
         return None
 
-    # Refuse if the slug already exists but maps to a different
-    # project_root — never silently hijack an unrelated thread.
     candidate_path = THREADS_DIR / f"{slug}.json"
     if candidate_path.exists():
-        return None
+        # Slug collision with a thread that maps to a different
+        # project_root — disambiguate with the parent directory's name.
+        # Example: ~/work/clientA/api and ~/work/clientB/api both want
+        # `api`; we fall back to `clientA-api` / `clientB-api`.
+        parent = os.path.basename(os.path.dirname(project_root))
+        slug = _slugify(f"{parent}-{basename}") or slug
+        candidate_path = THREADS_DIR / f"{slug}.json"
+        if candidate_path.exists():
+            # Still colliding — bail. User will have to /tinm init manually.
+            return None
 
     # Lazy-import to avoid loading sentence-transformers when not needed.
     from tinm_init import init_thread
@@ -115,6 +141,7 @@ def auto_init() -> str | None:
         init_thread(slug, title=basename, project_root=project_root)
     except (ValueError, FileExistsError):
         return None
+    _set_current(slug)
     return slug
 
 
