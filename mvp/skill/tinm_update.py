@@ -13,6 +13,7 @@ metadata.embedding_model in the thread file).
 
 Usage:
     python tinm_update.py <thread_id> --query "..." [--role user] [--client claude-code]
+    python tinm_update.py <thread_id> --query "..." --emit-hint   # prints trajectory hint to stdout
 """
 from __future__ import annotations
 
@@ -31,6 +32,16 @@ from tinm_paths import THREADS_DIR
 EXPECTED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EXPECTED_DIM = 384
 
+_STOPWORDS = frozenset({
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
+    "of", "with", "is", "are", "was", "were", "be", "been", "have", "has",
+    "do", "does", "did", "will", "would", "could", "should", "may", "might",
+    "can", "that", "this", "these", "those", "it", "its", "i", "you", "we",
+    "my", "your", "our", "what", "how", "why", "when", "where", "which",
+    "not", "no", "up", "out", "if", "as", "by", "from", "so", "then",
+    "about", "just", "get", "use", "now", "new", "also", "all", "any",
+})
+
 _ANAPHORIC_TOKEN_RE = re.compile(
     r"\b("
     r"it|its|itself|they|them|their|theirs|themselves|"
@@ -41,6 +52,53 @@ _ANAPHORIC_TOKEN_RE = re.compile(
 )
 
 _MODEL = None  # lazy-loaded; loading takes 2-5s and we want a clean error first
+
+
+def _top_query_terms(trajectory: list[dict], n: int = 5) -> list[str]:
+    """Top N non-stopword terms by frequency across all user queries."""
+    from collections import Counter
+    counts: Counter = Counter()
+    for turn in trajectory:
+        if turn.get("role") != "user":
+            continue
+        for w in re.findall(r"\b[a-zA-Z][a-zA-Z0-9_]*\b", turn["text"].lower()):
+            if w not in _STOPWORDS and len(w) > 2:
+                counts[w] += 1
+    return [w for w, _ in counts.most_common(n)]
+
+
+def _format_trajectory_hint(thread: dict, current_turn: int) -> str:
+    """Format the TINM trajectory hint for stdout injection.
+
+    Returns empty string if L1 not engaged or no prior queries exist.
+    The hint lists only user queries (never assistant responses) and includes
+    a disambiguation instruction so Claude uses queries — not intermediate
+    responses — to resolve anaphora.
+    """
+    if not thread["anchor"].get("engaged_so_far"):
+        return ""
+    prior_queries = [
+        (t["turn"], t["text"])
+        for t in thread.get("trajectory", [])
+        if t.get("role") == "user" and t["turn"] != current_turn
+    ]
+    if not prior_queries:
+        return ""
+    top_terms = thread["anchor"].get("top_terms", [])
+    anchor_str = " ".join(top_terms) if top_terms else "—"
+    lines = [
+        f"[TINM — Turn {current_turn} | Anchor: \"{anchor_str}\"]",
+        (
+            "To resolve pronouns (it, this, that, they) and understand the current "
+            "working context, use the query list below. Prior assistant responses may "
+            "contain intermediate answers that are not the current target — rely on "
+            "queries for disambiguation."
+        ),
+        "Prior questions this session:",
+    ]
+    for turn_num, text in prior_queries:
+        lines.append(f"  ({turn_num}) {text}")
+    return "\n".join(lines)
 
 
 def _utcnow() -> str:
@@ -122,6 +180,7 @@ def update_thread(
     alpha_max: float = 0.95,
     fixed_alpha: float = 0.85,
     activation_min_turn: int = 3,
+    emit_hint: bool = False,
 ) -> dict:
     thread_path = THREADS_DIR / f"{thread_id}.json"
     if not thread_path.exists():
@@ -194,6 +253,12 @@ def update_thread(
 
     thread["metadata"]["last_updated"] = _utcnow()
 
+    # Compute top query terms from full trajectory (including current turn)
+    anchor["top_terms"] = _top_query_terms(thread["trajectory"])
+
+    # Format hint before write so we work from final state
+    hint_text = _format_trajectory_hint(thread, next_turn) if emit_hint else ""
+
     _atomic_write_json(thread_path, thread)
 
     return {
@@ -202,6 +267,7 @@ def update_thread(
         "l1_engaged": is_l1_engaged,
         "engaged_so_far": anchor["engaged_so_far"],
         "anchor_update_count": anchor["update_count"],
+        "hint_text": hint_text,
     }
 
 
@@ -213,6 +279,8 @@ def main() -> None:
     parser.add_argument("--client", default=None)
     parser.add_argument("--no-adaptive", action="store_true",
                         help="Use fixed α instead of adaptive friction-based α.")
+    parser.add_argument("--emit-hint", action="store_true",
+                        help="Print trajectory hint to stdout for injection into Claude's context.")
     args = parser.parse_args()
 
     try:
@@ -222,17 +290,24 @@ def main() -> None:
             role=args.role,
             client=args.client,
             adaptive=not args.no_adaptive,
+            emit_hint=args.emit_hint,
         )
     except (FileNotFoundError, RuntimeError) as e:
         print(f"error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    print(
-        f"turn {result['turn']}: α={result['alpha_used']:.3f}, "
-        f"L1_engaged={result['l1_engaged']}, "
-        f"engaged_so_far={result['engaged_so_far']}, "
-        f"anchor_updates={result['anchor_update_count']}"
-    )
+    if args.emit_hint:
+        # In hint mode: print the hint (or nothing if L1 not engaged).
+        # Never print stats — they would be injected into Claude's context.
+        if result.get("hint_text"):
+            print(result["hint_text"])
+    else:
+        print(
+            f"turn {result['turn']}: α={result['alpha_used']:.3f}, "
+            f"L1_engaged={result['l1_engaged']}, "
+            f"engaged_so_far={result['engaged_so_far']}, "
+            f"anchor_updates={result['anchor_update_count']}"
+        )
 
 
 if __name__ == "__main__":

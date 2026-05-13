@@ -1,14 +1,21 @@
 #!/bin/bash
 # TINM UserPromptSubmit hook — append every user prompt to the current
-# thread's trajectory and EMA-update the anchor.
+# thread's trajectory, EMA-update the anchor, and emit the trajectory
+# hint to stdout (injected into Claude's context by Claude Code).
 #
 # Per https://code.claude.com/docs/en/hooks, the hook receives a JSON
-# payload on stdin with at least `prompt` and `session_id` fields. We
-# only need `prompt`. We do not print anything to stdout because we do
-# NOT want the update result (alpha, anchor stats) to bleed into
-# Claude's context — the silent persistence side of the protocol.
+# payload on stdin. stdout is injected as additional context before
+# Claude processes the current message — we use it to deliver the
+# TINM queries-only trajectory hint.
 
 set -e
+
+# Read stdin ONCE at the top. Must happen before any subshell reads
+# /dev/stdin — otherwise the first N bytes are consumed and the JSON
+# is corrupted for the subsequent PROMPT_TEXT extraction.
+PROMPT_JSON="$(cat)"
+
+echo "[$(date -u +%FT%TZ)] hook fired" >> /tmp/tinm_hook.log
 
 # TINM paths — honor TINM_HOME / TINM_PCP_DIR for Phase 2 multi-host
 # setups (Mac<->VPS via Syncthing-over-Tailscale). Defaults match the
@@ -42,23 +49,20 @@ THREAD_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
 [ -x "$VENV_PY" ] || exit 0
 [ -r "$UPDATE_SCRIPT" ] || exit 0
 
-# Read the hook payload from stdin and extract the prompt text via the
-# venv Python — we have a Python runtime right there, no reason to add a
-# `jq` dependency that the user may not have on a fresh macOS box.
-PROMPT_JSON="$(cat)"
+# Extract the prompt text from the already-captured JSON.
 PROMPT_TEXT="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
     'import json, sys; print(json.load(sys.stdin).get("prompt", ""), end="")' \
     2>/dev/null)"
 [ -n "$PROMPT_TEXT" ] || exit 0
 
-# Run the update silently. stdout/stderr both dropped — the script
-# already persists the new turn into the thread file, which is the only
-# side effect we want.
+# Run the update. stdout flows through to Claude's context (trajectory
+# hint). stderr is suppressed. The || true ensures hook exit code is 0.
 "$VENV_PY" "$UPDATE_SCRIPT" "$THREAD_ID" \
     --query "$PROMPT_TEXT" \
     --role user \
     --client claude-code \
-    >/dev/null 2>&1 || true
+    --emit-hint \
+    2>/dev/null || true
 
 # Phase 2 sync (best-effort, background): if the PCP store is a git
 # repo, commit + push the new turn so the peer host picks it up at its
