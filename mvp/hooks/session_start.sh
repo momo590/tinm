@@ -22,6 +22,14 @@ CURRENT_FILE="$TINM_HOME/current_thread"
 VENV_PY="$TINM_HOME/.venv/bin/python"
 LOAD_SCRIPT="$HOME/.claude/skills/tinm/tinm_load.py"
 
+# Phase 2 sync (best-effort): if the PCP store is a git repo, pull the
+# latest snapshot from the remote so this host's session starts with the
+# freshest threads/artifacts the peer pushed. Failure is silent — a
+# dropped network or transient remote error must not block the session.
+if [ -d "$TINM_PCP_DIR/.git" ]; then
+    git -C "$TINM_PCP_DIR" pull --rebase --autostash --quiet 2>/dev/null || true
+fi
+
 # No current thread → nothing to inject, exit cleanly so Claude Code does
 # not show an error.
 [ -r "$CURRENT_FILE" ] || exit 0

@@ -49,4 +49,19 @@ PROMPT_TEXT="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
     --client claude-code \
     >/dev/null 2>&1 || true
 
+# Phase 2 sync (best-effort, background): if the PCP store is a git
+# repo, commit + push the new turn so the peer host picks it up at its
+# next SessionStart. Detached subshell so the user's prompt is not
+# blocked on the network round-trip. Failure is silent — local state is
+# already persisted, so a missed push just delays propagation.
+if [ -d "$TINM_PCP_DIR/.git" ]; then
+    (
+        git -C "$TINM_PCP_DIR" add -A
+        if ! git -C "$TINM_PCP_DIR" diff --cached --quiet; then
+            git -C "$TINM_PCP_DIR" commit -m "auto: turn @ $(date -u +%FT%TZ) from $(hostname -s)" --quiet
+            git -C "$TINM_PCP_DIR" push --quiet 2>/dev/null
+        fi
+    ) >/dev/null 2>&1 &
+fi
+
 exit 0
