@@ -48,6 +48,8 @@ _STOPWORDS = frozenset({
     "nous", "vous", "mon", "ma", "mes", "ton", "ta", "ses", "son",
     "se", "on", "ou", "si", "car", "mais", "donc", "or", "ni", "car",
     "plus", "bien", "tout", "comme", "mais", "ça", "quoi", "ici",
+    "sans", "très", "après", "avant", "entre", "sous", "vers", "chez",
+    "dont", "lors", "même", "peu", "trop", "déjà", "encore", "toujours",
 })
 
 _ANAPHORIC_TOKEN_RE = re.compile(
