@@ -1,5 +1,5 @@
 {
-  "_comment_": "Merge these keys into your ~/.claude.json. Replace <REPO> with the absolute path of your TINM repo. After saving, fully quit Claude Code (Cmd+Q) and reopen — the MCP server registers and the hooks become active on next launch. See mvp/README.md for the install context.",
+  "_comment_": "Merge these keys into your Claude Code config. IMPORTANT: the destination file depends on your build of Claude Code — Claude Code Desktop (the GUI Claude.app) reads ~/.claude.json; Claude Code CLI (the `claude` terminal command) reads ~/.claude/settings.json. Putting the snippet in the wrong file means the hooks silently never fire. See mvp/clients/README.md §Claude Code for the matrix. Replace <REPO> with the absolute path of your TINM repo on this host (/Users/<you>/TNIM on Mac, /root/TNIM or /home/<you>/TNIM on Linux/VPS). The hook commands MUST point at the wrappers session_start.sh and user_prompt.sh — an inline command that only calls tinm_update.py persists locally but never pushes, so the other hosts never see the writes. After saving, fully quit Claude Code (Cmd+Q for Desktop; `exit` then re-launch for the CLI) — not just 'new session'. Hooks and MCP servers are read once at process start.",
 
   "mcpServers": {
     "tinm": {

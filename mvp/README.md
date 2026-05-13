@@ -107,7 +107,19 @@ session.
 
 ### Step 4 — Configure the MCP server + hooks in Claude Code
 
-Open (or create) `~/.claude.json` and merge in the snippet below.
+⚠️ **Which config file to edit depends on your Claude Code build**:
+
+- **Claude Code Desktop** (the GUI `Claude.app`) → `~/.claude.json`
+- **Claude Code CLI** (the `claude` terminal command, e.g. on a Linux
+  VPS) → `~/.claude/settings.json`
+
+Quick check on the box: if `claude --version` works in a terminal,
+you're on the CLI build → edit `~/.claude/settings.json`. If you only
+ever launch Claude Code by double-clicking the app icon, you're on
+Desktop → edit `~/.claude.json`. Both can coexist on the same machine
+(Mac with both installed) — configure each in its own file.
+
+Open (or create) the right file and merge in the snippet below.
 Replace `<REPO>` with your repo absolute path. **The hooks and the MCP
 server all use absolute paths — they will fail silently if you keep
 `<REPO>` as a literal placeholder.**
