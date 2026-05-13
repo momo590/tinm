@@ -1,6 +1,6 @@
 ---
-description: TINM cross-session continuity — load/init/update/find against a PCP v0 thread.
-argument-hint: load|init|update|artifact <args>
+description: TINM cross-session continuity — `/tinm` alone loads the current thread; subcommands handle init/update/artifact.
+argument-hint: [load|init|update|artifact <args>]
 ---
 
 The user invoked `/tinm $ARGUMENTS`.
@@ -13,9 +13,10 @@ and the script files:
 - Scripts:     `~/.claude/skills/tinm/<name>.py` (resolves through the
   symlink into the MVP repo)
 
-If the subcommand is `load`, surface the script's markdown output back to
-the user verbatim (it is the session-start context block). For other
-subcommands, run the script and report success/failure concisely.
+If `$ARGUMENTS` is empty or the subcommand is `load`, surface the
+script's markdown output back to the user verbatim (it is the
+session-start context block). For other subcommands, run the script and
+report success/failure concisely.
 
 ## Subcommand mapping
 
@@ -29,15 +30,27 @@ subcommands, run the script and report success/failure concisely.
 
 ## Behaviour
 
-- If `$ARGUMENTS` is empty: print the subcommand list above and stop, do
-  not invoke anything.
-- If the subcommand is unknown: print the same list with a note that the
-  subcommand was unrecognised; do not invoke anything.
+- **If `$ARGUMENTS` is empty**: this is the "remind me where I am" use
+  case — the default action when the user just types `/tinm`.
+  1. Read the current thread id from `~/.tinm/current_thread` (one line,
+     strip whitespace).
+  2. If the file is missing or empty, print:
+     > No current thread on this host. Run `/tinm init <slug> --title "..."`
+     > to start a new thread, or `/tinm load <slug>` to switch to an
+     > existing one. The list of available threads lives in
+     > `$TINM_PCP_DIR/threads/` (default `~/.tinm/pcp/threads/`).
+
+     Do not invoke anything else.
+  3. Otherwise, run
+     `~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_load.py <thread_id>`
+     and stream its markdown output back to the user verbatim.
+- If the subcommand is unknown: print the subcommand list above with a
+  note that the subcommand was unrecognised; do not invoke anything.
 - If the script exits non-zero (e.g. thread not found, embedding
   mismatch): surface the stderr text verbatim to the user and do not
   retry.
-- After a successful `load`, ask the user what they want to enchaîner;
-  do not assume the next action.
+- After a successful `load` (explicit or implicit via empty args), ask
+  the user what they want to do next; do not assume the next action.
 
 ## References
 
