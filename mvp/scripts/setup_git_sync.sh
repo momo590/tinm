@@ -39,6 +39,28 @@ cd "$PCP"
 echo "Target PCP dir : $PCP"
 echo "Remote         : $REMOTE_URL"
 
+# Safety check: refuse to init a git repo in a Phase 1 layout. The
+# back-compat fallback in tinm_paths.py resolves TINM_PCP_DIR to
+# TINM_HOME itself when ~/.tinm/pcp/ does not yet exist — fine for
+# read/write, but disastrous for `git add -A`, which would try to track
+# the Python venv (~500MB torch+numpy) and the per-host current_thread
+# marker. Detect and bail out with a clear remediation path.
+if [ -d "$PCP/.venv" ] || [ -f "$PCP/current_thread" ]; then
+    cat >&2 <<EOF
+ERROR: $PCP looks like a Phase 1 layout (contains .venv/ or current_thread).
+       Initialising git here would try to track the Python venv and the
+       per-host session marker, both of which must stay machine-local.
+
+Fix:   Run the migration first to move threads/ and artifacts/ under pcp/:
+
+           $(dirname "$0")/migrate_to_pcp_subdir.sh
+
+       Then re-run this script. It will then resolve $TINM_HOME/pcp and
+       only track the JSON store.
+EOF
+    exit 1
+fi
+
 if [ ! -d .git ]; then
     git init --quiet
     git remote add origin "$REMOTE_URL"
