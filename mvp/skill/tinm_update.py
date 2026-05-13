@@ -33,6 +33,7 @@ EXPECTED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EXPECTED_DIM = 384
 
 _STOPWORDS = frozenset({
+    # English
     "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
     "of", "with", "is", "are", "was", "were", "be", "been", "have", "has",
     "do", "does", "did", "will", "would", "could", "should", "may", "might",
@@ -40,6 +41,13 @@ _STOPWORDS = frozenset({
     "my", "your", "our", "what", "how", "why", "when", "where", "which",
     "not", "no", "up", "out", "if", "as", "by", "from", "so", "then",
     "about", "just", "get", "use", "now", "new", "also", "all", "any",
+    # French
+    "le", "la", "les", "un", "une", "des", "du", "de", "et", "est",
+    "en", "au", "aux", "ce", "que", "qui", "ne", "pas", "sur", "par",
+    "pour", "dans", "avec", "il", "elle", "ils", "elles", "je", "tu",
+    "nous", "vous", "mon", "ma", "mes", "ton", "ta", "ses", "son",
+    "se", "on", "ou", "si", "car", "mais", "donc", "or", "ni", "car",
+    "plus", "bien", "tout", "comme", "mais", "ça", "quoi", "ici",
 })
 
 _ANAPHORIC_TOKEN_RE = re.compile(
