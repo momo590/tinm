@@ -21,10 +21,10 @@ Status legend:
 | Client | MCP server | Auto-load context (session start) | Auto-persist turn (user prompt) | Auto-init project thread | E2E status |
 |---|---|---|---|---|---|
 | **Claude Code** (CLI, Mac/Linux) | ✓ stdio | ✓ SessionStart hook | ✓ UserPromptSubmit hook | ✓ via `tinm_auto_init.py` | ✓ Phase 1+2 shipped, dogfooded |
-| **Claude Desktop** (Mac/Windows) | ✓ stdio | ◐ via MCP resources if client auto-reads them | ◐ rules-file instruction (see §3) | ◐ user runs `tinm.thread_init` once via Claude | ◇ next priority |
-| **Cursor** (IDE) | ✓ stdio | ◇ `.cursorrules` instruction | ◐ `.cursorrules` instruction | ◐ Claude tool call | ◇ planned |
-| **OpenClaw** (open-source Claude client) | ✓ stdio + ["Claude-specific channel notifications"](https://docs.openclaw.ai/cli/mcp) | ◇ unknown — may map to hooks | ◇ unknown | ◇ unknown | ◇ research needed; matrix to refine after a probe session |
-| **Cline** (VS Code extension) | ✓ stdio | ◐ `.clinerules` instruction | ◐ `.clinerules` instruction | ◐ Claude tool call | ◇ planned |
+| **Claude Desktop** (Mac/Windows) | ✓ stdio | ◐ MCP resource `tinm://current-thread` + prompt-instructed `tinm.load_thread_context` at session start | ◐ prompt-instructed `tinm.record_turn` every user message | ◐ Claude calls `tinm.thread_init` on user request | ◐ ready to install — see `mvp/clients/README.md` |
+| **Cursor** (IDE) | ✓ stdio | ◐ same universal prompt + `.cursorrules` | ◐ same | ◐ same | ◐ ready to install |
+| **Cline** (VS Code extension) | ✓ stdio | ◐ same universal prompt + `.clinerules` | ◐ same | ◐ same | ◐ ready to install |
+| **OpenClaw** (open-source Claude client) | ✓ stdio + ["Claude-specific channel notifications"](https://docs.openclaw.ai/cli/mcp) | ◇ universal prompt works; channel notifications may also give native hooks parity | ◇ same | ◇ same | ◇ research probe to refine to ◐ or possibly ✓ |
 | **Claude.ai** (web/desktop browser) | requires remote MCP HTTPS server | ✗ until we host the remote server | ✗ same | ✗ same | ◇ deferred — needs an HTTPS endpoint on the VPS |
 | **ChatGPT** | non-MCP — Custom GPT actions | ✗ different protocol entirely | ✗ | ✗ | ✗ deprioritised |
 
@@ -71,24 +71,29 @@ question.
 | **E** | **Propose MCP lifecycle-hooks extension upstream** — get `SessionStart` / `OnTurn` standardised in MCP so server-side handlers run on every client | very high (months — protocol change) | best long-term UX, zero per-client work | every MCP client once they adopt the new spec |
 | **F** | **Open-source client plugins** — write a TINM plugin for OpenClaw, Cline, Aider, etc. that hooks into their own extension points | medium (~1 day per client) | passive, native | only open-source / pluggable clients |
 
-### 1.2 Recommended sequencing
+### 1.2 Recommended sequencing — current state
 
-1. **Short-term (this week)**: ship Option **A** (rules files) for
-   Cursor + Cline + Claude Desktop, plus Option **C** (MCP resource)
-   for free. That brings the ◐ clients to "auto-load passive,
-   prompt-instructed persist" — almost as good as Claude Code with one
-   small per-project setup step.
-2. **Medium-term (2-4 weeks of real usage)**: pick the most-used non-
-   Claude-Code client, write a real plugin (Option **F**) so TINM
-   becomes fully passive there too. The order is data-driven — wait
-   to see which client you actually use.
+1. **Short-term (shipped 2026-05-13)**: Options **A** (universal
+   system prompt, one file at `mvp/clients/UNIVERSAL_SYSTEM_PROMPT.md`
+   pasteable into any client's custom instructions / rules surface) +
+   **C** (MCP resource `tinm://current-thread` exposed by the server).
+   The MCP tool surface also gained `tinm.record_turn` so non-hook
+   clients can persist explicitly. With one setup step per client,
+   Claude Desktop / Cursor / Cline reach ◐ status.
+2. **Medium-term (2-4 weeks of real usage)**: dogfood the universal
+   approach on whichever client you adopt second (Claude Desktop is
+   the natural candidate). Note the rough edges — they inform whether
+   we need a deeper per-client integration.
 3. **Long-term (months)**: file an MCP RFC for lifecycle hooks
-   (Option **E**) and contribute the reference implementation. Once
-   merged, every MCP client gets passive TINM for free.
+   (Option **E**) and contribute the reference implementation. Draft
+   pending at [`rfc_mcp_lifecycle_hooks.md`](rfc_mcp_lifecycle_hooks.md).
+   Once merged upstream and adopted by clients, ◐ rows in the matrix
+   become ✓ for free.
 
-Option **D** (daemon) stays as a fallback if a high-value client
-refuses to expose extension points and the user volume justifies the
-maintenance.
+Option **D** (daemon side-channel) stays as a fallback if a
+high-value client refuses to expose extension points and the user
+volume justifies the maintenance. Option **F** (per-client plugins)
+was rejected by the project owner as a maintenance trap.
 
 ---
 

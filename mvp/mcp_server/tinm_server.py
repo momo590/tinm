@@ -39,6 +39,7 @@ sys.path.insert(0, str(_SKILL_DIR))
 import tinm_artifact  # noqa: E402  (sys.path tweak above is intentional)
 import tinm_init  # noqa: E402
 import tinm_load  # noqa: E402
+import tinm_update  # noqa: E402
 from tinm_paths import CURRENT_FILE  # noqa: E402
 
 from mcp.server.fastmcp import FastMCP  # noqa: E402
@@ -159,6 +160,67 @@ def artifact_add(
         aliases=aliases,
     )
     return f"Registered artifact {entry['id']!r}: {entry['name']}"
+
+
+@mcp.tool()
+def record_turn(
+    text: str,
+    role: str = "user",
+    thread_id: str | None = None,
+    client: str = "mcp",
+) -> str:
+    """Append a turn to the current TINM thread and EMA-update its
+    anchor. This is the explicit equivalent of what the Claude Code
+    UserPromptSubmit hook does silently on every turn — call it from
+    MCP clients that do not expose lifecycle hooks (Claude Desktop,
+    Cursor, OpenClaw, Cline, …) once per user message to keep the
+    thread's trajectory growing across sessions. `text` is the verbatim
+    user prompt. `role` is "user" (default) or "assistant". `client` is
+    a free-form identifier (e.g. "claude-desktop", "cursor") that gets
+    recorded in metadata.client_history so the protocol knows which
+    client wrote the turn.
+
+    Use whenever the user has just sent a new message — every turn,
+    silently. The return value (turn number + L1 status) is for
+    diagnostics; do not surface it to the user unless they ask.
+    """
+    result = tinm_update.update_thread(
+        _resolve_thread_id(thread_id),
+        query=text,
+        role=role,
+        client=client,
+    )
+    return (
+        f"turn {result['turn']}: α={result['alpha_used']:.3f}, "
+        f"L1_engaged={result['l1_engaged']}, "
+        f"engaged_so_far={result['engaged_so_far']}"
+    )
+
+
+@mcp.resource("tinm://current-thread")
+def current_thread_resource() -> str:
+    """The markdown context block of the currently-active TINM thread.
+
+    MCP clients that auto-load resources (Claude Desktop, some IDEs)
+    pull this at session start and inject it into the conversation —
+    the protocol-standard equivalent of the Claude Code SessionStart
+    hook. Mirrors `load_thread_context` with default `n_trajectory=5`
+    on the current thread.
+    """
+    if not CURRENT_FILE.exists():
+        return (
+            "# TINM\n"
+            "_No current thread on this host yet. Ask Claude to call "
+            "`tinm.thread_init` to create one (or work in a git project "
+            "where Claude Code's SessionStart hook can auto-init)._"
+        )
+    thread_id = CURRENT_FILE.read_text().strip()
+    if not thread_id:
+        return (
+            "# TINM\n"
+            "_No current thread on this host yet._"
+        )
+    return tinm_load.load_thread(thread_id, n_trajectory=5)
 
 
 if __name__ == "__main__":
