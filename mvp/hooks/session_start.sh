@@ -21,6 +21,7 @@ export TINM_HOME TINM_PCP_DIR
 CURRENT_FILE="$TINM_HOME/current_thread"
 VENV_PY="$TINM_HOME/.venv/bin/python"
 LOAD_SCRIPT="$HOME/.claude/skills/tinm/tinm_load.py"
+AUTO_INIT_SCRIPT="$HOME/.claude/skills/tinm/tinm_auto_init.py"
 
 # Phase 2 sync (best-effort): if the PCP store is a git repo, pull the
 # latest snapshot from the remote so this host's session starts with the
@@ -28,6 +29,16 @@ LOAD_SCRIPT="$HOME/.claude/skills/tinm/tinm_load.py"
 # dropped network or transient remote error must not block the session.
 if [ -d "$TINM_PCP_DIR/.git" ]; then
     git -C "$TINM_PCP_DIR" pull --rebase --autostash --quiet 2>/dev/null || true
+fi
+
+# Auto-init: if no current thread on this host but we are inside a git
+# repo, derive a slug from the repo's basename and create / select a
+# thread silently. Lets the user skip `/tinm init` entirely on new
+# projects. No-op if current_thread is already set, or if we are not in
+# a git repo. Stderr is dropped so any diagnostic chatter does not leak
+# into Claude's context.
+if [ -x "$VENV_PY" ] && [ -r "$AUTO_INIT_SCRIPT" ]; then
+    "$VENV_PY" "$AUTO_INIT_SCRIPT" 2>/dev/null || true
 fi
 
 # No current thread → nothing to inject, exit cleanly so Claude Code does

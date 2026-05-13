@@ -37,6 +37,7 @@ _SKILL_DIR = _HERE.parent / "skill"
 sys.path.insert(0, str(_SKILL_DIR))
 
 import tinm_artifact  # noqa: E402  (sys.path tweak above is intentional)
+import tinm_init  # noqa: E402
 import tinm_load  # noqa: E402
 from tinm_paths import CURRENT_FILE  # noqa: E402
 
@@ -109,6 +110,26 @@ def artifact_find(
     """
     hits = tinm_artifact.cmd_find(_resolve_thread_id(thread_id), query, k=k)
     return tinm_artifact._format_hits_md(hits)
+
+
+@mcp.tool()
+def thread_init(
+    thread_id: str,
+    title: str,
+    project_root: str | None = None,
+) -> str:
+    """Create a new PCP v0 thread on demand and mark it current. Use
+    only when the user explicitly asks to start a brand-new memory
+    thread with a custom slug or title — most of the time the
+    SessionStart hook auto-creates a thread from the project directory
+    name and the user does not need this. `thread_id` is a lowercase
+    kebab-case slug (≤64 chars). `title` is the human-readable label
+    shown when the thread is loaded. `project_root` is an optional
+    absolute path that lets future sessions in that directory
+    auto-select this thread.
+    """
+    path = tinm_init.init_thread(thread_id, title=title, project_root=project_root)
+    return f"Created thread {thread_id!r} ({title!r}) at {path}"
 
 
 @mcp.tool()
