@@ -25,8 +25,9 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+from tinm_paths import THREADS_DIR
 
-THREADS_DIR = Path.home() / ".tinm" / "threads"
+
 EXPECTED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EXPECTED_DIM = 384
 

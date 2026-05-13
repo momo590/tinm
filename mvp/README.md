@@ -2,14 +2,21 @@
 
 A small daemon-shaped extension to Claude Code that gives it
 **cross-session continuity per work thread**: trajectory, EMA anchor,
-named artifact index, persisted as JSON in `~/.tinm/`. The format
-([PCP v0.1](pcp_v0_spec.md)) is intentionally vendor-neutral — any
-second client (Claude.ai, OpenClaw, …) that speaks PCP can read the
-same threads later.
+named artifact index, persisted as JSON under `$TINM_HOME` (default
+`~/.tinm/`). The format ([PCP v0.1](pcp_v0_spec.md)) is intentionally
+vendor-neutral — any second client (Claude.ai, OpenClaw, …) that
+speaks PCP can read the same threads later.
 
 This is the **Phase 1** scope from the project charter: Claude Code
 only, no cross-vendor yet. Cross-vendor and an autonomous UI (Stipple)
-come in Phase 2 (see `notes/project_charter.md`).
+come in Phase 2-cross-vendor (see `notes/project_charter.md`).
+
+**Phase 2 cross-machine sync** (same vendor, multiple hosts — Mac↔VPS
+Hostinger over Syncthing-on-Tailscale) is supported as an opt-in
+layout: set `TINM_HOME` / `TINM_PCP_DIR` to split the synced PCP store
+from the machine-local venv + session marker. See
+[`../notes/phase2_vps_runbook.md`](../notes/phase2_vps_runbook.md) for
+the full deployment guide.
 
 ## What you get
 
@@ -216,15 +223,40 @@ If (d) errors → `~/.claude/skills/tinm` is not a symlink (you `cp -r`'d
 ## File layout (state)
 
 ```
-~/.tinm/
-├── threads/
-│   └── <thread_id>.json          # trajectory + anchor + metadata
-├── artifacts/
-│   └── <thread_id>.json          # named artifacts (L4)
-├── current_thread                # one-line marker — the slug of the
-│                                 #   thread the SessionStart hook will load
-└── .venv/                        # Python venv (sentence-transformers, mcp, ...)
+$TINM_HOME/                       # default ~/.tinm — machine-local
+├── current_thread                # one-line marker — the slug of the thread
+│                                 #   the SessionStart hook will load (per-host)
+├── .venv/                        # Python venv (sentence-transformers, mcp, ...)
+│                                 #   arch-specific, NEVER sync across hosts
+└── pcp/                          # = $TINM_PCP_DIR; default $TINM_HOME/pcp.
+    │                             #   SAFE to point at a synced folder
+    │                             #   (Syncthing / iCloud / Tailscale Drive).
+    ├── threads/
+    │   └── <thread_id>.json      # trajectory + anchor + metadata
+    └── artifacts/
+        └── <thread_id>.json      # named artifacts (L4)
 ```
+
+The split is the single load-bearing design decision for cross-machine
+sync: only `$TINM_PCP_DIR` needs to be shared, while `current_thread`
+(per-host session marker) and `.venv/` (architecture-specific Python
+deps) must stay local.
+
+Override either path via env (e.g. in `~/.zshrc`):
+
+```bash
+export TINM_HOME="$HOME/.tinm"                    # machine-local base
+export TINM_PCP_DIR="$HOME/Syncthing/tinm-pcp"    # synced folder
+```
+
+Migrating an existing Phase-1 install (`~/.tinm/threads`,
+`~/.tinm/artifacts`) to the new layout is a single command:
+
+```bash
+<REPO>/mvp/scripts/migrate_to_pcp_subdir.sh
+```
+
+The script is idempotent and refuses to overwrite a non-empty target.
 
 ## Repo layout (source)
 
@@ -240,10 +272,13 @@ mvp/
 │   └── user_prompt.sh            # UserPromptSubmit hook — auto-update
 ├── mcp_server/
 │   └── tinm_server.py            # FastMCP server (4 tools, stdio)
+├── scripts/
+│   └── migrate_to_pcp_subdir.sh  # one-time Phase 1 -> Phase 2 layout migration
 └── skill/                        # CLI scripts (called by hooks + MCP server)
     ├── SKILL.md                  # legacy skill manifest (unused path —
     │                             #   auto-discovery never worked, see
     │                             #   commit 2644508 for the diagnosis)
+    ├── tinm_paths.py             # TINM_HOME / TINM_PCP_DIR resolver
     ├── tinm_init.py
     ├── tinm_load.py
     ├── tinm_update.py

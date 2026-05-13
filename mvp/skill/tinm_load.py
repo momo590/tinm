@@ -18,10 +18,7 @@ import json
 import sys
 from pathlib import Path
 
-
-THREADS_DIR = Path.home() / ".tinm" / "threads"
-ARTIFACTS_DIR = Path.home() / ".tinm" / "artifacts"
-CURRENT_FILE = Path.home() / ".tinm" / "current_thread"
+from tinm_paths import ARTIFACTS_DIR, CURRENT_FILE, THREADS_DIR
 
 
 def _check_version(pcp_version: str) -> None:

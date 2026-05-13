@@ -1,8 +1,9 @@
 """Initialise a new PCP v0 thread.
 
-Creates two empty JSON files:
-  ~/.tinm/threads/<thread_id>.json
-  ~/.tinm/artifacts/<thread_id>.json
+Creates two empty JSON files in the PCP store (default `~/.tinm/pcp/`,
+override via `TINM_PCP_DIR`):
+  <TINM_PCP_DIR>/threads/<thread_id>.json
+  <TINM_PCP_DIR>/artifacts/<thread_id>.json
 
 Refuses to overwrite an existing thread (the user must `rm` it or
 choose a new slug).
@@ -14,10 +15,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+from tinm_paths import ARTIFACTS_DIR, CURRENT_FILE, THREADS_DIR
 
 
 PCP_VERSION = "0.1"
@@ -25,11 +30,29 @@ EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBED_DIM = 384
 DEFAULT_ALPHA = 0.85
 
-THREADS_DIR = Path.home() / ".tinm" / "threads"
-ARTIFACTS_DIR = Path.home() / ".tinm" / "artifacts"
-CURRENT_FILE = Path.home() / ".tinm" / "current_thread"
-
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+
+
+def _atomic_write_json(path: Path, payload: dict) -> None:
+    """Write JSON atomically: temp file in same directory, then rename.
+
+    Atomicity matters under filesystem sync (Syncthing, iCloud): partial
+    writes must never be visible to the sync agent.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=str(path.parent)
+    )
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(json.dumps(payload, indent=2) + "\n")
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+        raise
 
 
 def _utcnow() -> str:
@@ -83,10 +106,13 @@ def init_thread(thread_id: str, title: str, project_root: str | None = None) -> 
         "artifacts": [],
     }
 
-    thread_path.write_text(json.dumps(thread, indent=2) + "\n")
-    artifacts_path.write_text(json.dumps(artifacts, indent=2) + "\n")
+    _atomic_write_json(thread_path, thread)
+    _atomic_write_json(artifacts_path, artifacts)
     # A newly initialised thread becomes the current thread — that is the
     # ergonomically obvious behaviour for `tinm init … && /tinm load`.
+    # current_thread is machine-local (top of TINM_HOME, outside the synced
+    # subtree) so each host can carry its own session marker.
+    CURRENT_FILE.parent.mkdir(parents=True, exist_ok=True)
     CURRENT_FILE.write_text(thread_id + "\n")
     return thread_path
 

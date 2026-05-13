@@ -38,18 +38,17 @@ sys.path.insert(0, str(_SKILL_DIR))
 
 import tinm_artifact  # noqa: E402  (sys.path tweak above is intentional)
 import tinm_load  # noqa: E402
+from tinm_paths import CURRENT_FILE  # noqa: E402
 
 from mcp.server.fastmcp import FastMCP  # noqa: E402
-
-
-CURRENT_FILE = Path.home() / ".tinm" / "current_thread"
 
 mcp = FastMCP("tinm")
 
 
 def _resolve_thread_id(thread_id: str | None) -> str:
     """Use the explicit thread_id when given, else fall back to the
-    currently-loaded thread stored at ~/.tinm/current_thread.
+    currently-loaded thread stored at `$TINM_HOME/current_thread`
+    (default `~/.tinm/current_thread`).
 
     Raises a ValueError if neither is available — Claude should surface
     the message verbatim and ask the user to /tinm load <slug>.
@@ -68,10 +67,11 @@ def _resolve_thread_id(thread_id: str | None) -> str:
 
 @mcp.tool()
 def current_thread() -> str:
-    """Return the slug of the currently-active TINM thread, or 'none' if
-    no thread has been loaded or initialised yet in this user's home.
-    Use this when the user asks "what am I working on?" or before
-    invoking any other tinm tool to confirm a thread exists.
+    """Return the slug of the currently-active TINM thread (machine-local
+    marker at `$TINM_HOME/current_thread`), or 'none' if no thread has
+    been loaded or initialised yet on this host. Use this when the user
+    asks "what am I working on?" or before invoking any other tinm tool
+    to confirm a thread exists.
     """
     if CURRENT_FILE.exists():
         text = CURRENT_FILE.read_text().strip()

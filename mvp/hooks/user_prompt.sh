@@ -10,8 +10,16 @@
 
 set -e
 
-CURRENT_FILE="$HOME/.tinm/current_thread"
-VENV_PY="$HOME/.tinm/.venv/bin/python"
+# TINM paths — honor TINM_HOME / TINM_PCP_DIR for Phase 2 multi-host
+# setups (Mac<->VPS via Syncthing-over-Tailscale). Defaults match the
+# Phase 1 single-host layout. current_thread + venv stay under TINM_HOME
+# (machine-local); the PCP store goes under TINM_PCP_DIR.
+TINM_HOME="${TINM_HOME:-$HOME/.tinm}"
+TINM_PCP_DIR="${TINM_PCP_DIR:-$TINM_HOME/pcp}"
+export TINM_HOME TINM_PCP_DIR
+
+CURRENT_FILE="$TINM_HOME/current_thread"
+VENV_PY="$TINM_HOME/.venv/bin/python"
 UPDATE_SCRIPT="$HOME/.claude/skills/tinm/tinm_update.py"
 
 # No current thread → nothing to do.
