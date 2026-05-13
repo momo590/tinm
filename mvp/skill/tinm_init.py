@@ -27,6 +27,7 @@ DEFAULT_ALPHA = 0.85
 
 THREADS_DIR = Path.home() / ".tinm" / "threads"
 ARTIFACTS_DIR = Path.home() / ".tinm" / "artifacts"
+CURRENT_FILE = Path.home() / ".tinm" / "current_thread"
 
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
@@ -84,6 +85,9 @@ def init_thread(thread_id: str, title: str, project_root: str | None = None) -> 
 
     thread_path.write_text(json.dumps(thread, indent=2) + "\n")
     artifacts_path.write_text(json.dumps(artifacts, indent=2) + "\n")
+    # A newly initialised thread becomes the current thread — that is the
+    # ergonomically obvious behaviour for `tinm init … && /tinm load`.
+    CURRENT_FILE.write_text(thread_id + "\n")
     return thread_path
 
 

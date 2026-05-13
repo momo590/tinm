@@ -21,6 +21,7 @@ from pathlib import Path
 
 THREADS_DIR = Path.home() / ".tinm" / "threads"
 ARTIFACTS_DIR = Path.home() / ".tinm" / "artifacts"
+CURRENT_FILE = Path.home() / ".tinm" / "current_thread"
 
 
 def _check_version(pcp_version: str) -> None:
@@ -96,6 +97,12 @@ def load_thread(thread_id: str, n_trajectory: int = 5) -> str:
         if arts_path.exists()
         else {"artifacts": []}
     )
+
+    # Loading a thread also marks it as current — so the SessionStart hook
+    # and the MCP `current_thread` tool consistently agree on which thread
+    # the user is currently working in.
+    CURRENT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CURRENT_FILE.write_text(thread_id + "\n")
 
     return _format_context(thread, artifacts, n_trajectory)
 

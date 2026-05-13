@@ -7,14 +7,19 @@ project. Read this *after* `conventions.md` and `experimental_roadmap.md`.
 
 ## ⮕ NEXT FOCUS (maintained at the end of every major session)
 
-**Last updated**: 2026-05-13 (end of session 4 — BibTeX verified
-against DBLP/Semantic Scholar with 6 corrections applied; MVP scaffold
-written and dogfooded: PCP v0 spec (`mvp/pcp_v0_spec.md`), Claude Code
-skill (`mvp/skill/`), dedicated venv at `~/.tinm/.venv` with
-sentence-transformers (Py 3.9 needed, numpy pinned <2 for torch ABI
-compat). End-to-end test passed on a dogfood thread
-`tinm-paper-polish`: 4 turns exercising L1 + adaptive EMA, 2 artifacts
-registered, 3 find queries verifying substring + embedding lookup).
+**Last updated**: 2026-05-13 (end of session 5 — MVP Phase 1 pivot
+**MCP server + hooks** instead of standalone Claude Code skill, after
+the user-level skill auto-discovery pathway turned out to never load
+`tinm` into `available-skills`. Architecture per docs research +
+claude-code-guide subagent: a stdio FastMCP server (4 tools) + two
+hooks (`SessionStart` auto-loads thread context, `UserPromptSubmit`
+auto-appends trajectory). `~/.tinm/.venv` rebuilt on Py 3.12 (brew) to
+satisfy `mcp[cli]` minimum 3.10. End-to-end smoke passes: MCP server
+imports + exposes 4 tools, both hooks transform stdin payload to disk
+state correctly, no `jq` dep. Slash command `/tinm` kept as fallback.
+**Phase 2 (cross-vendor via HTTPS endpoint + Claude.ai + ChatGPT +
+Stipple UI) is explicitly deferred until the user has used Phase 1 on
+real workflow for 2–4 weeks to confirm value.**).
 
 The natural next steps, in suggested priority order. The agent should
 propose this as the default starting point at session start, but the user
@@ -125,8 +130,11 @@ The companion documents:
 | Figure 1 (matplotlib) | ✓ `paper/figures/fig1_pareto.{pdf,png}` (regen via `make_fig1.py`) |
 | L1 activation threshold (MVP fix) | ✓ shipped in `tinm_lite.py` behind default-off flag |
 | **PCP v0 spec** | ✓ `mvp/pcp_v0_spec.md` (file-based JSON, single-user, deferred features in §5) |
-| **MVP skill (Claude Code)** | ✓ written + dogfooded; install: `ln -s …/mvp/skill ~/.claude/skills/tinm` + `~/.tinm/.venv` with `numpy<2` pin. Auto-discovery did not work in practice — primary invocation is via the slash command below. |
-| **MVP slash command `/tinm`** | ✓ `mvp/commands/tinm.md`, install: `ln -s …/mvp/commands/tinm.md ~/.claude/commands/tinm.md`. Subcommands: `load`, `init`, `update`, `artifact add\|find`. |
+| **MVP CLI scripts** (`mvp/skill/tinm_*.py`) | ✓ written + dogfooded; symlinked at `~/.claude/skills/tinm/` |
+| **MVP MCP server** (`mvp/mcp_server/tinm_server.py`) | ✓ FastMCP stdio, exposes `current_thread`, `load_thread_context`, `artifact_find`, `artifact_add`. Requires Py ≥ 3.10 venv (we ship a `~/.tinm/.venv` built on Py 3.12 via brew). |
+| **MVP hooks** (`mvp/hooks/`) | ✓ `SessionStart` (auto-load thread context) + `UserPromptSubmit` (auto-append trajectory, EMA-update anchor, L1 activation). Python-only deps, no `jq` requirement. |
+| **MVP slash command `/tinm`** | ✓ `mvp/commands/tinm.md`, kept as fallback / debug. Hooks + MCP are the primary invocation path. |
+| **`~/.claude.json` snippet** | ✓ at `mvp/install_snippet.json` — user merges into their config, sets `<REPO>` to absolute path. |
 | L4 conversation index (MVP feature) | ✓ shipped in `mvp/skill/tinm_artifact.py` (substring + embedding fallback) |
 
 ## 4. Open strategic decisions (await user input)

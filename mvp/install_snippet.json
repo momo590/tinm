@@ -1,0 +1,35 @@
+{
+  "_comment_": "Merge these keys into your ~/.claude.json. Replace <REPO> with the absolute path of your TINM repo. After saving, fully quit Claude Code (Cmd+Q) and reopen — the MCP server registers and the hooks become active on next launch. See mvp/README.md for the install context.",
+
+  "mcpServers": {
+    "tinm": {
+      "command": "/Users/user/.tinm/.venv/bin/python",
+      "args": [
+        "<REPO>/mvp/mcp_server/tinm_server.py"
+      ]
+    }
+  },
+
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<REPO>/mvp/hooks/session_start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<REPO>/mvp/hooks/user_prompt.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -3,3 +3,6 @@ sentence-transformers>=2.5,<4
 # is built against the numpy 1.x ABI; numpy 2.x raises "Numpy is not available"
 # at encode() time.
 numpy>=1.24,<2
+# MCP Python SDK powers mvp/mcp_server/tinm_server.py — the TINM tools
+# Claude Code talks to over stdio.
+mcp[cli]>=1.0
