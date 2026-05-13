@@ -83,9 +83,10 @@ the PCP store. ~15 min total. See
 |---|---|
 | Research substrate + paper draft | ~95% complete, BibTeX verification pending; EMNLP 2026 target |
 | 5 benchmarks (2 synthetic + MuSiQue 2/3-hop + 2WikiMultihopQA) | run, all comparisons p<0.05 |
-| MVP Phase 1 (Claude Code MCP + hooks) | shipped, dogfooded since 2026-05-12 |
-| MVP Phase 2 (cross-machine via git) | shipped 2026-05-13, see runbook |
-| Cross-vendor (Claude.ai, ChatGPT) | deferred (Phase 2-cross-vendor) |
+| MVP Phase 1 (Claude Code MCP + hooks + auto-init) | shipped, dogfooded since 2026-05-12 |
+| MVP Phase 2 (cross-machine via private git repo) | shipped 2026-05-13, see runbook |
+| Other MCP clients (Claude Desktop, Cursor, OpenClaw, Cline) | server reusable — see [`notes/clients_roadmap.md`](notes/clients_roadmap.md) for per-client plan and the open auto-persist-without-hooks question |
+| Claude.ai web + ChatGPT | gated on a remote MCP HTTPS endpoint (Claude.ai) or a Custom GPT actions wrapper (ChatGPT) — see roadmap |
 
 ## License
 
