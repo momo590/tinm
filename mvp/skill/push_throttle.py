@@ -69,7 +69,7 @@ def schedule_push(pcp_dir: str | Path, *, window_s: float = THROTTLE_WINDOW_S) -
             os._exit(0)
     elif pid is None:
         subprocess.Popen(
-            [sys.executable, "/Users/user/TNIM/mvp/skill/push_throttle.py",
+            [sys.executable, os.path.abspath(__file__),
              "_worker", str(pcp_dir), str(window_s)],
             start_new_session=True,
             stdin=subprocess.DEVNULL,
