@@ -1,36 +1,65 @@
 # TINM v0.1 — 2-minute setup
 
-On macOS or Linux, in your terminal:
+Someone DM'd you this? Read 30 seconds of context first, then run one line.
+
+**What this is.** TINM watches your Claude Code sessions and stores
+named artifacts in a local PCP store (`~/.tinm/pcp/`). Next time you
+open Claude Code on a related project, the relevant artifacts come
+back automatically — no `/load`, no copy-paste, no expanded
+`CLAUDE.md`. Cross-session memory for your AI pair-programmer.
+
+**What it removes.** That ten minutes at the start of every new
+session where you re-explain yesterday to Claude.
+
+## Install (macOS / Linux)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/momo590/tinm/main/mvp/scripts/install.sh | bash
 ```
 
-The installer will ask one question (telemetry — say `y` for local-only metrics, `n` if you'd rather not, totally fine either way).
+The installer asks one question (telemetry — say `y` for local-only
+metrics, `n` if you'd rather not, both are fine). About 3 minutes
+total; most of it is the `pip install` of the sentence-transformers
+wheel. Everything goes under `~/.tinm/` and `~/.claude/skills/tinm/`,
+nothing else touched.
 
-That's it. Open Claude Code and run `/tinm init my-project` to create your first thread.
+## See the whoa moment in minute 2 (the part that's worth the DM)
 
-## How it works in 30 seconds
+A fresh install has an empty PCP store, so cross-session recall has
+nothing to surface yet. The bundled `tinm-tour` demo solves that:
 
-1. **Cross-session** — TINM watches your sessions and stores named artifacts. Next time you open Claude Code on the same machine, the relevant ones come back automatically.
-2. **Long sessions** — coming in v0.2 (a digest gets injected when the session crosses ~40k tokens to keep Claude sharp).
-3. **Privacy** — everything is local, in `~/.tinm/`. Nothing leaves your machine unless you explicitly opt in to share aggregate telemetry (counts only, never content).
+```bash
+~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_demo.py
+```
 
-## Try it
+This imports a 5-artifact walkthrough of the founder shipping the
+TINM paper (the actual 2WikiMultihopQA pilot run). Open a fresh
+Claude Code session and paste — verbatim:
 
-After install, in any Claude Code session:
+> What was the biggest absolute effect we measured on the 2WikiMultihopQA pilot?
+
+Watch the `[TINM — Turn 1 | Anchor: ...]` line print BEFORE Claude
+responds. TINM will pull the `wiki2hop-results` artifact and Claude
+will quote `+0.114 F1, t=4.03` without reading any file. That moment
+— a new session recalling a prior session's specific number without
+you doing anything — is the whole product.
+
+To remove the demo cleanly when you're done:
+
+```bash
+~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_demo.py --remove
+```
+
+## Use it on your own work
 
 ```
-/tinm init my-project
-```
-Creates your first thread. Then keep working as usual.
-
-Anytime you want to mark something for cross-session recall:
-```
+/tinm init my-project          # creates a real thread under your name
 /tinm save "the architecture decision"
 ```
 
-Next session, ask Claude anything that touches that decision — TINM will pull the artifact back without you re-pasting anything.
+Keep working. Next time you open Claude Code and ask about anything
+that touches that decision, TINM pulls the artifact back. No
+`/tinm load` needed — the SessionStart hook handles it.
 
 ## Check what TINM is doing
 
@@ -38,13 +67,22 @@ Next session, ask Claude anything that touches that decision — TINM will pull 
 ~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_status.py
 ```
 
-Shows your current thread, anchor terms, trajectory length.
+Current thread, anchor terms, trajectory length, artifact count. If
+you ever wonder "is it working?", this is the answer.
 
 ```bash
 ~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_telemetry.py status
 ```
 
-If you opted in to telemetry: shows event count + the path to the local log.
+Telemetry state — opt-out at any moment with `tinm_telemetry.py off`.
+
+## Privacy in 3 lines
+
+Everything is in `~/.tinm/` on your machine. Nothing leaves unless
+you ran `tinm_telemetry.py on --share`, and even then it's aggregate
+counts (events per skill, install id) — never prompts, never file
+contents. The privacy contract is tested in
+`mvp/tests/test_telemetry.py`.
 
 ## Uninstall (fully reversible)
 
@@ -52,14 +90,24 @@ If you opted in to telemetry: shows event count + the path to the local log.
 bash ~/.tinm/source/mvp/scripts/uninstall.sh
 ```
 
-Removes `~/.tinm/`, `~/.claude/skills/tinm/`, and the TINM-registered hooks from `~/.claude/settings.json` (your other hooks are preserved). A backup of `settings.json` is left at `settings.json.pre-uninstall` in case you want to roll back manually.
+Removes `~/.tinm/`, `~/.claude/skills/tinm/`, and the TINM-registered
+hooks from `~/.claude/settings.json`. Your other hooks are preserved.
+A backup of `settings.json` is left at the same path with a
+`.pre-uninstall` suffix.
 
-Pass `TINM_KEEP_PCP=1` to keep your thread history at `~/tinm-pcp-keep-<timestamp>/` for future reinstall:
+Keep your thread history for a future reinstall:
 
 ```bash
 TINM_KEEP_PCP=1 bash ~/.tinm/source/mvp/scripts/uninstall.sh
 ```
 
-## Feedback
+The PCP store moves to `~/tinm-pcp-keep-<timestamp>/` instead of being
+deleted.
 
-Anything weird? Anything magical? DM me the moment you notice — that's exactly what I'm collecting for beta v0.1.
+## Feedback (the data this stage actually needs)
+
+If you tried it: DM [@MmakhtarDiop](https://x.com/MmakhtarDiop) on X with the
+one thing that surprised you, broke for you, or did nothing for you.
+Beta v0.1 is collecting Sean Ellis answers — *would you be upset if
+TINM disappeared tomorrow?* A 1-line "yes because X" or "no because
+Y" is worth more than any GitHub star.

@@ -25,6 +25,15 @@
 
 set -euo pipefail
 
+# Under `curl ... | bash`, stdin is the script body — so any interactive
+# prompt later (the telemetry y/n at step 7) reads garbage or gets EOF.
+# Re-attach stdin to the user's terminal where possible (Homebrew pattern).
+# When there is no controlling tty (CI, headless), keep stdin and rely on
+# the non-interactive fallback in tinm_telemetry.install_opt_in_interactive.
+if [ ! -t 0 ] && [ -r /dev/tty ]; then
+    exec </dev/tty
+fi
+
 TINM_HOME="${TINM_HOME:-$HOME/.tinm}"
 TINM_PCP_DIR="${TINM_PCP_DIR:-$TINM_HOME/pcp}"
 TINM_VENV="$TINM_HOME/.venv"
@@ -38,12 +47,16 @@ CLAUDE_SETTINGS="$CLAUDE_DIR/settings.json"
 # ---------------------------------------------------------------------------
 # 1. Platform + Python checks
 # ---------------------------------------------------------------------------
+echo "TINM — cross-session memory for Claude Code. Installing..."
+echo "  (so a fresh session can recall yesterday's work without re-pasting context)"
+echo ""
+
 case "$(uname -s)" in
     Darwin) PLATFORM="macOS" ;;
     Linux)  PLATFORM="Linux" ;;
     *)
         echo "✗ Unsupported platform: $(uname -s). TINM supports macOS and Linux." >&2
-        echo "  Windows support is on the roadmap — DM the maintainer if you'd like it sooner." >&2
+        echo "  Windows support is on the roadmap — DM @MmakhtarDiop on X if you'd like it sooner." >&2
         exit 1
         ;;
 esac
@@ -220,14 +233,30 @@ cat <<EOF
 ✓ TINM v0.1 installed.
 ══════════════════════════════════════════════════════════════════
 
-Next steps:
+Verify the install before starting work:
+    $TINM_VENV/bin/python $CLAUDE_SKILLS_DIR/tinm_status.py
+You should see: "hooks loaded" and 0 threads / 0 artifacts. That means
+TINM is wired into Claude Code's hooks and the PCP store is ready.
+
+Then, in this order:
+
   1. Restart Claude Code (or Claude Desktop) so it loads the new hooks.
-  2. In a Claude Code session, type:
-       /tinm init my-first-thread
-     to create your first thread.
-  3. Save a named artifact at any time with:
-       /tinm save "my key decision"
-     TINM will pull it back in future sessions automatically.
+
+  2. Try the whoa moment without waiting 24h for cross-session recall
+     to fire on your own data. Run:
+         $TINM_VENV/bin/python $CLAUDE_SKILLS_DIR/tinm_demo.py
+     to install the bundled "tinm-tour" demo thread, then in a fresh
+     Claude Code session paste:
+         "What was the biggest absolute effect we measured on the
+          2WikiMultihopQA pilot?"
+     Watch the [TINM ...] hook line surface BEFORE Claude responds.
+     TINM will quote +0.114 F1, t=4.03 without reading any file.
+
+  3. When you're ready to start your own work:
+         /tinm init my-first-thread
+     Save anything for cross-session recall:
+         /tinm save "my key decision"
+     TINM pulls it back in future sessions automatically.
 
 Locations:
   source     $TINM_SOURCE
@@ -242,6 +271,7 @@ Telemetry status (opt-in, local-only by default):
 Uninstall (fully reversible):
   bash $TINM_SOURCE/mvp/scripts/uninstall.sh
 
-Issues / feedback: DM the maintainer.
+Feedback or issues: DM @MmakhtarDiop on X — even a 1-line "this
+surprised me" or "this broke" is exactly what beta v0.1 needs.
 
 EOF

@@ -1,0 +1,12 @@
+{"version": 2, "width": 96, "height": 24, "timestamp": 1778792099, "idle_time_limit": 1.5, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}, "title": "TINM — new session surfaces yesterday's +0.114 F1 without reading any file"}
+[0.010984, "o", "\u001b[H\u001b[2J\u001b[3J"]
+[0.313664, "o", "\u001b[90m# Yesterday I shipped Phase 1 of the TINM paper.\u001b[0m\r\n"]
+[1.317284, "o", "\u001b[90m# Today, new terminal, new session, no /load, no file open.\u001b[0m\r\n"]
+[2.317852, "o", "\u001b[90m# TINM seeded with `tinm demo` (see README).\u001b[0m\r\n"]
+[3.520616, "o", "\r\n"]
+[3.923234, "o", "\u001b[1m$\u001b[0m claude -p \"What was the biggest absolute effect we\r\n"]
+[3.97548, "o", "              measured on the 2WikiMultihopQA pilot?\"\r\n"]
+[27.199596, "o", "**+0.114 absolute lift** for `tinm_a085` over `rag_baseline` (t=4.03, paired, n=50). tinm_a085 scored 0.481 — the largest measured effect in the Phase 1 pilot set.\r\n\r\nSource: `benchmark/runs/pilot_wiki2hop_results.json` (per the loaded TINM thread).\r\n"]
+[27.201587, "o", "\u001b[?1006l\u001b[?1003l\u001b[?1002l\u001b[?1000l\u001b[>4m\u001b[<u\u001b[?1004l\u001b[?2031l\u001b[?2004l\u001b[?25h\u001b7\u001b[r\u001b8\u001b]0;\u0007"]
+[27.404258, "o", "\u001b[?25h"]
+[28.93775, "o", "\r\n\u001b[32m# +0.114 surfaced from yesterday — no file read, no context paste.\u001b[0m\r\n"]
