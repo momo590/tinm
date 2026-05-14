@@ -28,6 +28,7 @@ export TINM_HOME TINM_PCP_DIR
 CURRENT_FILE="$TINM_HOME/current_thread"
 VENV_PY="$TINM_HOME/.venv/bin/python"
 UPDATE_SCRIPT="$HOME/.claude/skills/tinm/tinm_update.py"
+PUSH_THROTTLE_SCRIPT="$HOME/.claude/skills/tinm/push_throttle.py"
 
 # No current thread → nothing to do.
 [ -r "$CURRENT_FILE" ] || exit 0
@@ -75,14 +76,8 @@ fi
 # next SessionStart. Detached subshell so the user's prompt is not
 # blocked on the network round-trip. Failure is silent — local state is
 # already persisted, so a missed push just delays propagation.
-if [ -d "$TINM_PCP_DIR/.git" ]; then
-    (
-        git -C "$TINM_PCP_DIR" add threads/ artifacts/ compaction_markers/ gstack-projects/ 2>/dev/null || true
-        if ! git -C "$TINM_PCP_DIR" diff --cached --quiet; then
-            git -C "$TINM_PCP_DIR" commit -m "auto: turn @ $(date -u +%FT%TZ) from $(hostname -s)" --quiet
-            git -C "$TINM_PCP_DIR" push --quiet 2>/dev/null
-        fi
-    ) >/dev/null 2>&1 &
+if [ -d "$TINM_PCP_DIR/.git" ] && [ -r "$PUSH_THROTTLE_SCRIPT" ]; then
+    "$VENV_PY" "$PUSH_THROTTLE_SCRIPT" schedule "$TINM_PCP_DIR" >/dev/null 2>&1 &
 fi
 
 exit 0

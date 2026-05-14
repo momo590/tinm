@@ -25,7 +25,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from tinm_paths import ARTIFACTS_DIR, THREADS_DIR
+from lockfile import pcp_lock
+from tinm_paths import ARTIFACTS_DIR, THREADS_DIR, TINM_PCP_DIR
 from tinm_scoring import EXPECTED_DIM, _encode, rank_artifacts
 
 
@@ -104,7 +105,8 @@ def cmd_add(
         "created_at": _utcnow(),
     }
     artifacts.setdefault("artifacts", []).append(entry)
-    _atomic_write_json(path, artifacts)
+    with pcp_lock(TINM_PCP_DIR):
+        _atomic_write_json(path, artifacts)
     return entry
 
 
