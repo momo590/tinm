@@ -32,7 +32,7 @@ THREAD_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
 
 # Extract session_id + transcript_path + assistant final text from the
 # transcript JSONL. Defensive: any parse error → exit 0 silently.
-ASSISTANT_TEXT="$(printf '%s' "$PAYLOAD_JSON" | "$VENV_PY" - << 'PYEOF' 2>/dev/null
+ASSISTANT_TEXT="$(printf '%s' "$PAYLOAD_JSON" | "$VENV_PY" - << 'PYEOF' 2>>/tmp/tinm_hook.log
 import json, sys, pathlib
 
 try:
@@ -87,7 +87,7 @@ PYEOF
 
 # Hand off to the Python capture module which handles buffer write,
 # atomic atomicity, and tool-only-turn skip.
-echo "$ASSISTANT_TEXT" | "$VENV_PY" - "$THREAD_ID" "$CAPTURE_SCRIPT" << 'PYEOF' 2>/dev/null || true
+echo "$ASSISTANT_TEXT" | "$VENV_PY" - "$THREAD_ID" "$CAPTURE_SCRIPT" << 'PYEOF' 2>>/tmp/tinm_hook.log || true
 import json, sys, runpy, types
 thread_id = sys.argv[1]
 capture_path = sys.argv[2]

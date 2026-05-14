@@ -76,14 +76,37 @@ fi
     2>/dev/null || true
 
 # v0.2.1 — assistant capture pipeline. Score the buffered assistant turn
-# against this user prompt, register approved/rejected/neutral. Silent on
-# error; the user's flow must never be blocked.
+# against this user prompt, register approved/rejected/neutral. Never
+# blocks the user's flow on error — errors go to /tmp/tinm_hook.log so
+# they can be diagnosed without surfacing to the prompt path.
 if [ -r "$CAPTURE_SCRIPT" ] && [ -n "$SESSION_ID" ]; then
+    # Read trajectory length (= current user turn count) AFTER the update
+    # above. This becomes `next_user_turn` for the buffered assistant
+    # response — the precise turn that scored it.
+    TURN_COUNT="$(SKILL_DIR="$HOME/.claude/skills/tinm" \
+        "$VENV_PY" - "$THREAD_ID" 2>>/tmp/tinm_hook.log << 'PYEOF'
+import json, os, sys
+from pathlib import Path
+sys.path.insert(0, os.environ.get('SKILL_DIR', ''))
+from tinm_paths import THREADS_DIR
+p = THREADS_DIR / f'{sys.argv[1]}.json'
+if p.exists():
+    try:
+        print(len(json.loads(p.read_text()).get('trajectory', [])), end='')
+    except (json.JSONDecodeError, OSError):
+        pass
+PYEOF
+)"
+
+    TURN_ARG=()
+    [ -n "$TURN_COUNT" ] && TURN_ARG=(--next-turn "$TURN_COUNT")
+
     "$VENV_PY" "$CAPTURE_SCRIPT" score_and_flush \
         --thread-id "$THREAD_ID" \
         --session-id "$SESSION_ID" \
         --prompt "$PROMPT_TEXT" \
-        >/dev/null 2>&1 || true
+        "${TURN_ARG[@]}" \
+        >/dev/null 2>>/tmp/tinm_hook.log || true
 fi
 
 # Phase 2 sync (best-effort, background): if the PCP store is a git
