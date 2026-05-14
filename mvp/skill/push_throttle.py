@@ -111,7 +111,15 @@ _TRACKED_PATHS = (
     "artifacts/",
     "compaction_markers/",
     "gstack-projects/",
-    "journal.jsonl",
+)
+
+# Glob patterns expanded at push time. Used for per-host journal files —
+# `journal-<hostname>.jsonl` (avoids Mac↔VPS race) and the migrated
+# `journal-legacy-pre-*.jsonl`. Cannot use a literal name because git
+# aborts on missing pathspec; cannot let the shell expand because we run
+# `git add` via subprocess (no shell). So we expand in Python first.
+_TRACKED_GLOBS = (
+    "journal-*.jsonl",
 )
 
 
@@ -122,6 +130,8 @@ def _run_git(pcp_dir: Path, count: int) -> None:
 
     # Only add paths that exist — git aborts the whole add otherwise.
     existing = [p for p in _TRACKED_PATHS if (pcp_dir / p).exists()]
+    for pattern in _TRACKED_GLOBS:
+        existing.extend(p.name for p in pcp_dir.glob(pattern))
     if existing:
         subprocess.run([*git_args, "add", *existing],
                        check=False, capture_output=True)

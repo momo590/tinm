@@ -57,12 +57,14 @@ THREAD_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
 # Stderr is dropped so warnings (e.g., LibreSSL noise) do not pollute.
 "$VENV_PY" "$LOAD_SCRIPT" "$THREAD_ID" 2>/dev/null
 
-# Auto-journal: append a session_start entry to pcp/journal.jsonl.
-# Captures turns, anchor terms, artifact count. Zero user action needed.
-JOURNAL_FILE="$TINM_PCP_DIR/journal.jsonl"
-"$VENV_PY" - "$THREAD_ID" "$TINM_PCP_DIR" "$JOURNAL_FILE" << 'PYEOF' 2>/dev/null || true
-import json, sys, datetime, pathlib
-thread_id, pcp_dir, journal_path = sys.argv[1], sys.argv[2], sys.argv[3]
+# Auto-journal: append a session_start entry to pcp/journal-<hostname>.jsonl.
+# Per-host file (not journal.jsonl) avoids the Mac↔VPS git race when both
+# ends append concurrently. Reads in tinm_journal.py glob journal-*.jsonl
+# to reconstruct the cross-host stream.
+"$VENV_PY" - "$THREAD_ID" "$TINM_PCP_DIR" << 'PYEOF' 2>/dev/null || true
+import json, sys, datetime, pathlib, socket
+thread_id, pcp_dir = sys.argv[1], sys.argv[2]
+journal_path = pathlib.Path(pcp_dir) / f"journal-{socket.gethostname().replace('.', '-')}.jsonl"
 try:
     t = json.loads((pathlib.Path(pcp_dir) / "threads" / f"{thread_id}.json").read_text())
     turns = len([x for x in t.get("trajectory", []) if x.get("role") == "user"])

@@ -11,26 +11,32 @@ import json
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-from tinm_paths import TINM_PCP_DIR as PCP_DIR
+from tinm_paths import TINM_PCP_DIR as PCP_DIR, JOURNAL_GLOB
 
 
 def load_journal(days: int) -> list[dict]:
-    journal = PCP_DIR / "journal.jsonl"
-    if not journal.exists():
-        return []
+    """Aggregate journal entries across all per-host journal files.
+
+    Writes go to `journal-<hostname>.jsonl` (one per host) to eliminate the
+    Mac↔VPS git race. Reads merge them all back into a single chronological
+    stream. The migrated legacy file (`journal-legacy-pre-*.jsonl`) is
+    included automatically because it matches the glob.
+    """
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    entries = []
-    for line in journal.read_text().splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            e = json.loads(line)
-            ts = datetime.fromisoformat(e["ts"].replace("Z", "+00:00"))
-            if ts >= cutoff:
-                entries.append(e)
-        except Exception:
-            continue
+    entries: list[dict] = []
+    for journal in sorted(PCP_DIR.glob(JOURNAL_GLOB)):
+        for line in journal.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                e = json.loads(line)
+                ts = datetime.fromisoformat(e["ts"].replace("Z", "+00:00"))
+                if ts >= cutoff:
+                    entries.append(e)
+            except Exception:
+                continue
+    entries.sort(key=lambda e: e.get("ts", ""))
     return entries
 
 

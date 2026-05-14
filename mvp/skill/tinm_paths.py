@@ -17,6 +17,7 @@ Layout, with defaults:
 from __future__ import annotations
 
 import os
+import socket
 from pathlib import Path
 
 
@@ -57,3 +58,14 @@ ARTIFACTS_DIR: Path = TINM_PCP_DIR / "artifacts"
 
 CURRENT_FILE: Path = TINM_HOME / "current_thread"
 VENV_PYTHON: Path = TINM_HOME / ".venv" / "bin" / "python"
+
+# Per-host journal — splits writes by hostname to eliminate the Mac↔VPS
+# race when both ends append concurrently (memory: tinm-journal-race-risk).
+# `.` is replaced with `-` because `.` in filenames can confuse some tools
+# (e.g., shell globs in older awk, makefiles).
+JOURNAL_HOST: str = socket.gethostname().replace(".", "-")
+JOURNAL_FILE: Path = TINM_PCP_DIR / f"journal-{JOURNAL_HOST}.jsonl"
+
+# Glob pattern aggregators use to read all per-host journals (including
+# the migrated `journal-legacy-pre-*.jsonl` file from before the split).
+JOURNAL_GLOB: str = "journal-*.jsonl"
