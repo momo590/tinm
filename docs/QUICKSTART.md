@@ -23,26 +23,27 @@ total; most of it is the `pip install` of the sentence-transformers
 wheel. Everything goes under `~/.tinm/` and `~/.claude/skills/tinm/`,
 nothing else touched.
 
-## See the whoa moment in minute 2 (the part that's worth the DM)
+## See cross-session recall on bundled sample data
 
-A fresh install has an empty PCP store, so cross-session recall has
-nothing to surface yet. The bundled `tinm-tour` demo solves that:
+A fresh install has an empty PCP store, so there's nothing for TINM
+to recall yet. The bundled `tinm-tour` demo gives you sample
+history to test against:
 
 ```bash
 ~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_demo.py
 ```
 
-This imports a 5-artifact walkthrough of the founder shipping the
-TINM paper (the actual 2WikiMultihopQA pilot run). Open a fresh
-Claude Code session and paste — verbatim:
+This imports a 5-artifact walkthrough of a real research session
+from the TINM paper. Open a fresh Claude Code session and paste,
+verbatim:
 
 > What was the biggest absolute effect we measured on the 2WikiMultihopQA pilot?
 
-Watch the `[TINM — Turn 1 | Anchor: ...]` line print BEFORE Claude
-responds. TINM will pull the `wiki2hop-results` artifact and Claude
-will quote `+0.114 F1, t=4.03` without reading any file. That moment
-— a new session recalling a prior session's specific number without
-you doing anything — is the whole product.
+Claude will answer with a specific number from the demo's stored
+artifacts — one it could not have produced without TINM pulling
+that artifact into context. That is the mechanism: prior-session
+content surfaced into a fresh session, no manual load, no file
+read.
 
 To remove the demo cleanly when you're done:
 
