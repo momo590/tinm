@@ -6,7 +6,7 @@
 curl -fsSL https://raw.githubusercontent.com/momo590/tinm/main/mvp/scripts/install.sh | bash
 ```
 
-macOS / Linux, ~2 minutes, fully reversible. See [`docs/JORDAN_SETUP.md`](docs/JORDAN_SETUP.md) for the DM-friendly walkthrough.
+macOS / Linux, ~2 minutes, fully reversible. See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for the DM-friendly walkthrough.
 
 > *"~7K tokens saved on a single question that Claude pulled from a thread I'd ended 3 days earlier — without me re-pasting anything."* (founder N=1)
 
@@ -49,7 +49,7 @@ After install:
 python ~/.claude/skills/tinm/tinm_status.py
 ```
 
-Full DM-able walkthrough: [`docs/JORDAN_SETUP.md`](docs/JORDAN_SETUP.md).
+Full DM-able walkthrough: [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
 ## Uninstall (fully reversible)
 
