@@ -29,6 +29,7 @@ CURRENT_FILE="$TINM_HOME/current_thread"
 VENV_PY="$TINM_HOME/.venv/bin/python"
 UPDATE_SCRIPT="$HOME/.claude/skills/tinm/tinm_update.py"
 PUSH_THROTTLE_SCRIPT="$HOME/.claude/skills/tinm/push_throttle.py"
+CAPTURE_SCRIPT="$HOME/.claude/skills/tinm/tinm_assistant_capture.py"
 
 # No current thread → nothing to do.
 [ -r "$CURRENT_FILE" ] || exit 0
@@ -73,6 +74,17 @@ fi
     --emit-hint \
     --telemetry user_prompt_submit \
     2>/dev/null || true
+
+# v0.2.1 — assistant capture pipeline. Score the buffered assistant turn
+# against this user prompt, register approved/rejected/neutral. Silent on
+# error; the user's flow must never be blocked.
+if [ -r "$CAPTURE_SCRIPT" ] && [ -n "$SESSION_ID" ]; then
+    "$VENV_PY" "$CAPTURE_SCRIPT" score_and_flush \
+        --thread-id "$THREAD_ID" \
+        --session-id "$SESSION_ID" \
+        --prompt "$PROMPT_TEXT" \
+        >/dev/null 2>&1 || true
+fi
 
 # Phase 2 sync (best-effort, background): if the PCP store is a git
 # repo, commit + push the new turn so the peer host picks it up at its

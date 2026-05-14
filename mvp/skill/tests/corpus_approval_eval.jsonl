@@ -1,0 +1,49 @@
+{"text": "C", "expected_label": "strong_approval", "source": "tinm-tour-t20"}
+{"text": "OK", "expected_label": "strong_approval", "source": "synthetic"}
+{"text": "GO !", "expected_label": "strong_approval", "source": "synthetic"}
+{"text": "Go", "expected_label": "strong_approval", "source": "tinm-tour-t33"}
+{"text": "ok", "expected_label": "strong_approval", "source": "synthetic"}
+{"text": "parfait", "expected_label": "strong_approval", "source": "synthetic"}
+{"text": "merci", "expected_label": "strong_approval", "source": "synthetic"}
+{"text": "yes", "expected_label": "strong_approval", "source": "synthetic"}
+{"text": "exact", "expected_label": "strong_approval", "source": "synthetic"}
+{"text": "exactement", "expected_label": "strong_approval", "source": "synthetic"}
+{"text": "C'est top!", "expected_label": "explicit_approval", "source": "tinm-tour-t14-partial"}
+{"text": "c'est nickel", "expected_label": "explicit_approval", "source": "synthetic"}
+{"text": "Looks good", "expected_label": "explicit_approval", "source": "synthetic"}
+{"text": "Sounds great", "expected_label": "explicit_approval", "source": "synthetic"}
+{"text": "C'est top! Maintenant…", "expected_label": "explicit_approval", "source": "tinm-tour-t14"}
+{"text": "OK, maintenant aide-moi avec X", "expected_label": "approval_then_move", "source": "synthetic"}
+{"text": "yes parfait merci", "expected_label": "approval_then_move", "source": "synthetic"}
+{"text": "Perfect, maintenant fais X", "expected_label": "approval_then_move", "source": "synthetic"}
+{"text": "Non", "expected_label": "correction", "source": "synthetic"}
+{"text": "Stop", "expected_label": "correction", "source": "synthetic"}
+{"text": "Le pain n'est pas là", "expected_label": "correction", "source": "tinm-tour-t30-fragment"}
+{"text": "Attends, autre sujet", "expected_label": "correction", "source": "synthetic"}
+{"text": "Wait, that's wrong", "expected_label": "correction", "source": "synthetic"}
+{"text": "C'est faux", "expected_label": "strong_correction", "source": "synthetic"}
+{"text": "Tu n'as pas compris", "expected_label": "strong_correction", "source": "synthetic"}
+{"text": "You got it wrong", "expected_label": "strong_correction", "source": "synthetic"}
+{"text": "oui mais regardes ça", "expected_label": "refinement", "source": "synthetic"}
+{"text": "actually that's wrong", "expected_label": "refinement", "source": "synthetic"}
+{"text": "Est-ce que tu peux refaire ?", "expected_label": "question", "source": "synthetic"}
+{"text": "Comment je fais ça ?", "expected_label": "question", "source": "synthetic"}
+{"text": "How does X work?", "expected_label": "question", "source": "synthetic"}
+{"text": "Pourquoi ?", "expected_label": "question", "source": "synthetic"}
+{"text": "Qu'est-ce que tu en penses ?", "expected_label": "question", "source": "synthetic"}
+{"text": "What was the biggest absolute effect we measured?", "expected_label": "question", "source": "tinm-tour-t9"}
+{"text": "Est ce que ta réponse provient des threads tinm ?", "expected_label": "question", "source": "tinm-tour-t25"}
+{"text": "fais les 2 commandes pour moi", "expected_label": "implicit_move_on", "source": "tinm-tour-t10"}
+{"text": "commit and merge", "expected_label": "implicit_move_on", "source": "tinm-tour-t12"}
+{"text": "supprime la branche personal-assets après téléchargement", "expected_label": "implicit_move_on", "source": "tinm-tour-t22"}
+{"text": "J'ai déjà téléchargé.", "expected_label": "implicit_move_on", "source": "tinm-tour-t23"}
+{"text": "lance codes review", "expected_label": "implicit_move_on", "source": "tinm-tour-t32"}
+{"text": "J'ai vérifié il a disparu de la liste. GO !", "expected_label": "implicit_move_on", "source": "tinm-tour-t18"}
+{"text": "Let's launch the additional experiments: 2Wiki and MuSiQue n=100", "expected_label": "implicit_move_on", "source": "tinm-tour-t1"}
+{"text": "I pick 2WikiMultihopQA as the fifth benchmark", "expected_label": "implicit_move_on", "source": "tinm-tour-t3"}
+{"text": "Modify the figure like we did for it before", "expected_label": "implicit_move_on", "source": "tinm-tour-t5"}
+{"text": "", "expected_label": "empty", "source": "synthetic"}
+{"text": "   ", "expected_label": "empty", "source": "synthetic"}
+{"text": "Oui, tu as raison. Il y avait un token classic, je viens d'update", "expected_label": "implicit_move_on", "source": "tinm-tour-t17"}
+{"text": "Liste OK, gardons Khassidalearning. Comment je permet au PAT de delete les repo ?", "expected_label": "approval_then_move", "source": "tinm-tour-t15"}
+{"text": "Cool, maintenant aides moi à écrire ma bio X", "expected_label": "approval_then_move", "source": "tinm-tour-t19-fragment"}

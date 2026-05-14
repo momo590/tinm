@@ -80,6 +80,8 @@ def cmd_add(
     summary: str,
     aliases: list[str] | None = None,
     skip_embedding: bool = False,
+    source: str = "manual",
+    approval: dict | None = None,
 ) -> dict:
     artifacts, path = _load_artifacts(thread_id)
 
@@ -95,6 +97,7 @@ def cmd_add(
             f"Embedding dim mismatch: got {len(embedding)}, expected {EXPECTED_DIM}"
         )
 
+    now = _utcnow()
     entry = {
         "id": artifact_id,
         "name": name,
@@ -103,17 +106,48 @@ def cmd_add(
         "ref": ref,
         "summary": summary,
         "embedding": embedding,
-        "created_at": _utcnow(),
+        "created_at": now,
+        "source": source,
+        "last_retrieved_at": now,
     }
+    if approval is not None:
+        entry["approval"] = approval
     artifacts.setdefault("artifacts", []).append(entry)
     with pcp_lock(TINM_PCP_DIR):
         _atomic_write_json(path, artifacts)
     return entry
 
 
+def _lazy_migrate_entry(entry: dict, now: str) -> bool:
+    """Add v0.2.1 fields to a pre-v0.2.1 artifact entry. Returns True if mutated."""
+    changed = False
+    if "source" not in entry:
+        entry["source"] = "legacy_manual"
+        changed = True
+    if "last_retrieved_at" not in entry:
+        entry["last_retrieved_at"] = entry.get("created_at", now)
+        changed = True
+    return changed
+
+
 def cmd_find(thread_id: str, query: str, k: int = 3) -> list[dict]:
-    artifacts, _ = _load_artifacts(thread_id)
-    hits = rank_artifacts(artifacts.get("artifacts", []), query, k=k)
+    artifacts, path = _load_artifacts(thread_id)
+    now = _utcnow()
+    entries = artifacts.get("artifacts", [])
+    mutated = False
+    for entry in entries:
+        if _lazy_migrate_entry(entry, now):
+            mutated = True
+    hits = rank_artifacts(entries, query, k=k)
+    if hits:
+        hit_ids = {h["id"] for h in hits}
+        for entry in entries:
+            if entry["id"] in hit_ids:
+                entry["last_retrieved_at"] = now
+                mutated = True
+    if mutated:
+        with pcp_lock(TINM_PCP_DIR):
+            _atomic_write_json(path, artifacts)
     if hits:
         # Lane H telemetry — cross_session_hit + tokens_saved_estimated.
         # thread_id truncated to 64 chars by _validate_payload, but we also

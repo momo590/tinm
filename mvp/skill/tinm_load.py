@@ -20,6 +20,12 @@ from pathlib import Path
 
 from tinm_paths import ARTIFACTS_DIR, CURRENT_FILE, THREADS_DIR
 
+# Recap caps (spec §10 decision 3 + outside-voice §12)
+MAX_NAMED_ARTIFACTS = 5
+MAX_APPROVED_EXCHANGES = 2
+MANUAL_SOURCES = {"manual", "legacy_manual"}
+APPROVED_SOURCE = "approved_exchange"
+
 
 def _check_version(pcp_version: str) -> None:
     major = pcp_version.split(".", 1)[0]
@@ -27,6 +33,21 @@ def _check_version(pcp_version: str) -> None:
         raise RuntimeError(
             f"Unsupported pcp_version {pcp_version!r}; this loader speaks 0.x only."
         )
+
+
+def _split_artifacts(arts: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Return (named, approved) tuples capped to the recap budgets."""
+    named, approved = [], []
+    for a in arts:
+        source = a.get("source", "legacy_manual")
+        if source == APPROVED_SOURCE:
+            approved.append(a)
+        elif source in MANUAL_SOURCES or source not in {APPROVED_SOURCE}:
+            named.append(a)
+    # Most recent last → take last N for each. created_at sort if available.
+    named.sort(key=lambda a: a.get("created_at", ""))
+    approved.sort(key=lambda a: a.get("created_at", ""))
+    return named[-MAX_NAMED_ARTIFACTS:], approved[-MAX_APPROVED_EXCHANGES:]
 
 
 def _format_context(thread: dict, artifacts: dict, n_trajectory: int) -> str:
@@ -61,18 +82,43 @@ def _format_context(thread: dict, artifacts: dict, n_trajectory: int) -> str:
     lines.append("")
 
     arts = artifacts.get("artifacts", [])
-    if arts:
-        lines.append(f"## Named artifacts ({len(arts)})")
-        for a in arts:
+    named, approved = _split_artifacts(arts)
+
+    if named:
+        total_named = sum(
+            1 for a in arts
+            if a.get("source", "legacy_manual") != APPROVED_SOURCE
+        )
+        header = f"## Named artifacts ({len(named)}"
+        header += f" of {total_named}, capped)" if total_named > len(named) else ")"
+        lines.append(header)
+        for a in named:
             ref_part = f" → `{a['ref']}`" if a.get("ref") else ""
             aliases = a.get("aliases") or []
             alias_part = f" _(aka: {', '.join(aliases)})_" if aliases else ""
             lines.append(f"- **{a['name']}**{ref_part}{alias_part}")
             lines.append(f"  - {a['summary']}")
-    else:
+    elif not approved:
         lines.append("## Named artifacts")
         lines.append("_(none registered yet)_")
     lines.append("")
+
+    if approved:
+        total_approved = sum(
+            1 for a in arts if a.get("source") == APPROVED_SOURCE
+        )
+        header = f"## Recent approved exchanges ({len(approved)}"
+        header += (
+            f" of {total_approved}, capped)" if total_approved > len(approved) else ")"
+        )
+        lines.append(header)
+        for a in approved:
+            trigger = (a.get("approval") or {}).get("trigger_phrase", "")
+            turn = (a.get("approval") or {}).get("next_user_turn", "?")
+            tag = f" _via t{turn} «{trigger}»_" if trigger else ""
+            lines.append(f"- **{a['name']}**{tag}")
+            lines.append(f"  - {a['summary'][:300]}")
+        lines.append("")
 
     return "\n".join(lines)
 

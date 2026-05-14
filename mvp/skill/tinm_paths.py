@@ -55,9 +55,14 @@ TINM_PCP_DIR: Path = _tinm_pcp_dir()
 
 THREADS_DIR: Path = TINM_PCP_DIR / "threads"
 ARTIFACTS_DIR: Path = TINM_PCP_DIR / "artifacts"
+ARTIFACTS_COLD_DIR: Path = TINM_PCP_DIR / "artifacts_cold"
+REJECTED_DIR: Path = TINM_PCP_DIR / "rejected"
+ASSISTANT_LOG_DIR: Path = TINM_PCP_DIR / "assistant_log"
 
 CURRENT_FILE: Path = TINM_HOME / "current_thread"
 VENV_PYTHON: Path = TINM_HOME / ".venv" / "bin" / "python"
+
+BUFFER_DIR: Path = TINM_HOME / "buffer"
 
 # Per-host journal — splits writes by hostname to eliminate the Mac↔VPS
 # race when both ends append concurrently (memory: tinm-journal-race-risk).

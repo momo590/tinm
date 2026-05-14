@@ -46,6 +46,8 @@ EventType = Literal[
     "digest_injection",
     "latency_added_ms",
     "user_explicit_action",
+    "approval_signal_classified",
+    "assistant_turn_captured",
 ]
 
 EVENT_FIELDS: dict[str, set[str]] = {
@@ -54,6 +56,8 @@ EVENT_FIELDS: dict[str, set[str]] = {
     "digest_injection": {"turns_compressed", "digest_tokens", "trigger_token_count"},
     "latency_added_ms": {"hook", "duration_ms"},
     "user_explicit_action": {"action"},
+    "approval_signal_classified": {"label", "signal_w", "thread_id"},
+    "assistant_turn_captured": {"decision", "signal_w", "thread_id"},
 }
 
 ALLOWED_PAYLOAD_TYPES = (str, int, float, bool, type(None))
