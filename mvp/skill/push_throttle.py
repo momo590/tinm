@@ -18,6 +18,7 @@ actual git operations. The throttle layer schedules; the lock layer serializes.
 from __future__ import annotations
 
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -25,7 +26,11 @@ from pathlib import Path
 
 MARKER_FILENAME = ".tinm-push-pending"
 THROTTLE_WINDOW_S = 30.0
-COMMIT_MSG_TEMPLATE = "tinm: sync {ts} ({count} writes coalesced)"
+# Hostname in the commit message is a small but useful diagnostic — lets a
+# reader of `git log` immediately tell whether a sync came from Mac or VPS
+# (regression-fix turn 25 after we lost the legacy `from <hostname>` format
+# during the inline-git → push_throttle migration).
+COMMIT_MSG_TEMPLATE = "tinm: sync {ts} from {hostname} ({count} writes coalesced)"
 
 
 def schedule_push(pcp_dir: str | Path, *, window_s: float = THROTTLE_WINDOW_S) -> bool:
@@ -125,7 +130,8 @@ _TRACKED_GLOBS = (
 
 def _run_git(pcp_dir: Path, count: int) -> None:
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    msg = COMMIT_MSG_TEMPLATE.format(ts=ts, count=count)
+    hostname = socket.gethostname().replace(".", "-")
+    msg = COMMIT_MSG_TEMPLATE.format(ts=ts, hostname=hostname, count=count)
     git_args = ["git", "-C", str(pcp_dir)]
 
     # Only add paths that exist — git aborts the whole add otherwise.
