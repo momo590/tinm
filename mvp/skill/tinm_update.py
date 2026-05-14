@@ -26,7 +26,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from tinm_paths import THREADS_DIR
+from lockfile import pcp_lock
+from tinm_paths import THREADS_DIR, TINM_PCP_DIR
 
 
 EXPECTED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
@@ -274,7 +275,8 @@ def update_thread(
     # Format hint before write so we work from final state
     hint_text = _format_trajectory_hint(thread, next_turn) if emit_hint else ""
 
-    _atomic_write_json(thread_path, thread)
+    with pcp_lock(TINM_PCP_DIR):
+        _atomic_write_json(thread_path, thread)
 
     return {
         "turn": next_turn,

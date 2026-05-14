@@ -22,7 +22,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from tinm_paths import ARTIFACTS_DIR, CURRENT_FILE, THREADS_DIR
+from lockfile import pcp_lock
+from tinm_paths import ARTIFACTS_DIR, CURRENT_FILE, THREADS_DIR, TINM_PCP_DIR
 
 
 PCP_VERSION = "0.1"
@@ -106,8 +107,9 @@ def init_thread(thread_id: str, title: str, project_root: str | None = None) -> 
         "artifacts": [],
     }
 
-    _atomic_write_json(thread_path, thread)
-    _atomic_write_json(artifacts_path, artifacts)
+    with pcp_lock(TINM_PCP_DIR):
+        _atomic_write_json(thread_path, thread)
+        _atomic_write_json(artifacts_path, artifacts)
     # A newly initialised thread becomes the current thread — that is the
     # ergonomically obvious behaviour for `tinm init … && /tinm load`.
     # current_thread is machine-local (top of TINM_HOME, outside the synced

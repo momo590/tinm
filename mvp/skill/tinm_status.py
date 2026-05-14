@@ -6,7 +6,8 @@ import json
 import sys
 from pathlib import Path
 
-from tinm_paths import CURRENT_FILE, THREADS_DIR
+from lockfile import pcp_lock
+from tinm_paths import CURRENT_FILE, THREADS_DIR, TINM_PCP_DIR
 
 
 def show_status(thread_id: str) -> None:
@@ -48,7 +49,8 @@ def reset_anchor(thread_id: str) -> None:
     thread["anchor"]["update_count"] = 0
     thread["anchor"]["engaged_so_far"] = False
     thread["anchor"]["top_terms"] = []
-    thread_path.write_text(json.dumps(thread, indent=2) + "\n")
+    with pcp_lock(TINM_PCP_DIR):
+        thread_path.write_text(json.dumps(thread, indent=2) + "\n")
     print(f"Anchor reset for thread {thread_id}. Trajectory preserved.")
 
 

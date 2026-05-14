@@ -76,13 +76,7 @@ fi
 # blocked on the network round-trip. Failure is silent — local state is
 # already persisted, so a missed push just delays propagation.
 if [ -d "$TINM_PCP_DIR/.git" ]; then
-    (
-        git -C "$TINM_PCP_DIR" add threads/ artifacts/ compaction_markers/ gstack-projects/ 2>/dev/null || true
-        if ! git -C "$TINM_PCP_DIR" diff --cached --quiet; then
-            git -C "$TINM_PCP_DIR" commit -m "auto: turn @ $(date -u +%FT%TZ) from $(hostname -s)" --quiet
-            git -C "$TINM_PCP_DIR" push --quiet 2>/dev/null
-        fi
-    ) >/dev/null 2>&1 &
+    "$VENV_PY" /Users/user/TNIM/mvp/skill/push_throttle.py schedule "$TINM_PCP_DIR" >/dev/null 2>&1 &
 fi
 
 exit 0
