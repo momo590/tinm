@@ -56,3 +56,29 @@ THREAD_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
 # Run the loader and let its markdown stdout enter Claude's context.
 # Stderr is dropped so warnings (e.g., LibreSSL noise) do not pollute.
 "$VENV_PY" "$LOAD_SCRIPT" "$THREAD_ID" 2>/dev/null
+
+# Auto-journal: append a session_start entry to pcp/journal.jsonl.
+# Captures turns, anchor terms, artifact count. Zero user action needed.
+JOURNAL_FILE="$TINM_PCP_DIR/journal.jsonl"
+"$VENV_PY" - "$THREAD_ID" "$TINM_PCP_DIR" "$JOURNAL_FILE" << 'PYEOF' 2>/dev/null || true
+import json, sys, datetime, pathlib
+thread_id, pcp_dir, journal_path = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    t = json.loads((pathlib.Path(pcp_dir) / "threads" / f"{thread_id}.json").read_text())
+    turns = len([x for x in t.get("trajectory", []) if x.get("role") == "user"])
+    anchor = t.get("anchor", {}).get("top_terms", [])[:4]
+except Exception:
+    turns, anchor = 0, []
+try:
+    a = json.loads((pathlib.Path(pcp_dir) / "artifacts" / f"{thread_id}.json").read_text())
+    n_art = len(a)
+except Exception:
+    n_art = 0
+entry = {
+    "ts": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "thread": thread_id, "turns": turns, "anchor": anchor,
+    "artifacts": n_art, "event": "session_start"
+}
+with open(journal_path, "a") as f:
+    f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+PYEOF
