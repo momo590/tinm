@@ -87,6 +87,6 @@ if [ "${TINM_KEEP_PCP:-0}" = "1" ]; then
     echo "  $HOME/tinm-pcp-keep-*           (your thread history)"
 fi
 echo ""
-echo "If TINM didn't earn its keep, I want to know why — DM @Makhtar89043272 on X."
+echo "If TINM didn't earn its keep, I want to know why — DM @MmakhtarDiop on X."
 echo "Even a 1-line \"didn't work because X\" helps beta v0.1 a lot."
 echo ""
