@@ -31,6 +31,44 @@ if [ -d "$TINM_PCP_DIR/.git" ]; then
     git -C "$TINM_PCP_DIR" pull --rebase --autostash --quiet 2>/dev/null || true
 fi
 
+# Gstack-style update check (best-effort, 24h cached, silent on error).
+# Prints a one-line notice into Claude's context if a newer version of
+# TINM has shipped. Controlled by ~/.tinm/config.json:update_notify
+# (default true) and auto_upgrade (default false).
+if [ -x "$VENV_PY" ]; then
+    "$VENV_PY" - << 'PYEOF' 2>/dev/null || true
+import os, sys, pathlib, subprocess
+sys.path.insert(0, str(pathlib.Path.home() / ".claude" / "skills" / "tinm"))
+try:
+    from tinm_config import get_config
+    from tinm_update_check import check_for_update
+    cfg = get_config()
+    if not cfg.get("update_notify", True):
+        sys.exit(0)
+    r = check_for_update()
+    if not r.get("has_update"):
+        sys.exit(0)
+    current, latest = r.get("current"), r.get("latest")
+    if cfg.get("auto_upgrade", False):
+        upgrade_script = pathlib.Path.home() / ".claude" / "skills" / "tinm" / "tinm_upgrade.py"
+        subprocess.Popen(
+            [sys.executable, str(upgrade_script)],
+            start_new_session=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        print(f"⏫ TINM v{latest} available — auto-upgrading in background.")
+    else:
+        print(
+            f"⏫ TINM update available: v{current} → v{latest}. "
+            f"Run `python ~/.claude/skills/tinm/tinm_upgrade.py` to apply."
+        )
+except Exception:
+    pass
+PYEOF
+fi
+
 # Auto-init: if no current thread on this host but we are inside a git
 # repo, derive a slug from the repo's basename and create / select a
 # thread silently. Lets the user skip `/tinm init` entirely on new

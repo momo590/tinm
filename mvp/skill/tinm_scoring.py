@@ -14,8 +14,9 @@ cases pass unchanged. The multi-signal model sketched in the scaffold
 ``top_terms`` + ``created_at`` + ``recall_count`` + ``pinned``) is
 **future work**; TINM does not yet populate those fields.
 
-Divergence from the scaffold spec at
-``/Users/user/.gstack/projects/tinm/scaffolds/tinm_scoring.py``:
+Divergence from the scaffold spec (lives at
+``<your-gstack-projects>/tinm/scaffolds/tinm_scoring.py`` on the dev
+machine — vendor-neutral target shape that consumers reference):
 
 * The scaffold's ``Artifact`` Protocol expects ``top_terms``, ``created_at``,
   ``recall_count``, ``pinned``. The real PCP v0 artifact dict (written by

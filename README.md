@@ -1,98 +1,79 @@
-# TINM — memory for multi-turn LLM agents
+# TINM — context memory for Claude Code
 
-TINM (Turtle-Inspired Navigation Memory; also written TNIM in earlier
-documents — same thing) is a research-and-product project on **memory
-for LLM agents in multi-turn settings**, with:
-
-- a **research substrate** (math + algorithms in `tinm_substrate.md`,
-  benchmarks in `benchmark/`, paper draft in `paper/`),
-- a **practical MVP for Claude Code** (`mvp/`) that gives the CLI
-  cross-session continuity per work thread — auto-loaded trajectory,
-  EMA-updated anchor, named-artifact index, persisted as JSON in
-  `~/.tinm/`.
-
-The MVP follows the [PCP v0.1 protocol](mvp/pcp_v0_spec.md), an
-intentionally vendor-neutral format so a second client (Claude.ai,
-ChatGPT, …) can speak the same threads later.
-
-## Quick start — Phase 1 (single host, Mac)
-
-Phase 1 = one machine, no sync, ~10 min install. Full instructions in
-[`mvp/README.md`](mvp/README.md). The short version:
+**TINM (TNIM)** is the only layer that makes Claude Code remember **across your sessions** AND keeps **long-running sessions coherent** — without you doing anything.
 
 ```bash
-# 1. Python ≥ 3.10 venv (MCP SDK needs it)
-brew install python@3.12
-python3.12 -m venv ~/.tinm/.venv
-~/.tinm/.venv/bin/pip install -r mvp/requirements.txt
-
-# 2. Symlinks for the hooks + slash command
-ln -s "$PWD/mvp/skill"            ~/.claude/skills/tinm
-ln -s "$PWD/mvp/commands/tinm.md" ~/.claude/commands/tinm.md
-
-# 3. Merge mvp/install_snippet.json into ~/.claude.json (sub <REPO> first)
-# 4. Quit + reopen Claude Code
-# 5. /tinm init my-first-thread --title "My first TINM thread"
+curl -fsSL https://raw.githubusercontent.com/momo590/tinm/main/mvp/scripts/install.sh | bash
 ```
 
-That's it. Subsequent sessions on this thread auto-load context at
-SessionStart and auto-persist each turn.
+macOS / Linux, ~2 minutes, fully reversible. See [`docs/JORDAN_SETUP.md`](docs/JORDAN_SETUP.md) for the DM-friendly walkthrough.
 
-## Quick start — Phase 2 (two hosts, e.g. Mac ↔ VPS)
+> *"~7K tokens saved on a single question that Claude pulled from a thread I'd ended 3 days earlier — without me re-pasting anything."* (founder N=1)
 
-Phase 2 = shared memory across two machines via a private git repo as
-the PCP store. ~15 min total. See
-[`notes/phase2_vps_runbook.md`](notes/phase2_vps_runbook.md). Outline:
+## What it does
 
-1. Create a private GitHub repo (e.g. `tinm-pcp`).
-2. `mvp/scripts/setup_git_sync.sh <repo-url>` on the first host —
-   wires `$TINM_PCP_DIR/.git`, pushes the existing threads.
-3. On the second host, run the bootstrap prompt at
-   [`notes/vps_bootstrap_prompt.md`](notes/vps_bootstrap_prompt.md)
-   inside a Claude Code session — it installs Python, clones, builds
-   the venv, registers the hooks + MCP server.
-4. The TINM hooks transparently `git pull` at SessionStart and
-   background-`git push` after each turn.
+1. **Cross-session memory.** Every Claude Code session writes a *trajectory* and a *top-terms anchor* to `~/.tinm/pcp/`. When you reopen Claude Code (same project or `/tinm load <slug>`), the trajectory + relevant named artifacts (`/tinm save "..."`) get re-injected automatically. No re-pasting.
+2. **Intra-session digest** *(v0.2, shipping soon)*. When a session crosses ~40k tokens, TINM swaps old turns for an LLM-compressed digest — Claude stays sharp, the original turns stay in the PCP store.
+3. **Self-instrumented telemetry** *(opt-in, local-only by default)*. TINM measures the value it actually generates: cross-session hits, tokens saved, hook latency, your `/tinm` usage. Aggregates only, never content. Opt out anytime: `python ~/.claude/skills/tinm/tinm_telemetry.py off`.
 
-## Repo layout
+## How it works (5 lines)
 
-```
-.
-├── mvp/                  TINM MVP for Claude Code (PCP v0 + MCP server + hooks)
-│   ├── README.md             detailed install + usage
-│   ├── pcp_v0_spec.md        PCP v0.1 protocol spec
-│   ├── skill/                CLI scripts (init, load, update, artifact, paths)
-│   ├── mcp_server/           FastMCP server exposed to Claude Code over stdio
-│   ├── hooks/                SessionStart + UserPromptSubmit hooks
-│   ├── scripts/              migrate_to_pcp_subdir.sh, setup_git_sync.sh
-│   └── commands/             /tinm slash command (fallback / debug)
-├── notes/                Project documents
-│   ├── project_charter.md    vision, scope, strategic decisions
-│   ├── conventions.md        binding agent-user working agreement
-│   ├── experimental_roadmap.md  L1-L4 research roadmap
-│   ├── phase2_vps_runbook.md    cross-machine setup runbook
-│   └── vps_bootstrap_prompt.md  drop-in prompt for VPS-side Claude Code
-├── tinm_substrate.md     mathematical foundation (EMA anchor, friction, etc.)
-├── paper/                draft of the research paper
-└── benchmark/            5 benchmarks, 4 agents, paper-ready result tables
-```
+- **Hooks.** Three Claude Code hooks (`SessionStart`, `UserPromptSubmit`, `PreCompact`+`PostCompact`) call short Python scripts that read/write `~/.tinm/pcp/`.
+- **PCP v0 format.** Vendor-neutral JSON ([`mvp/pcp_v0_spec.md`](mvp/pcp_v0_spec.md)) so a second client (Claude Desktop, openClaw, …) can speak the same threads later.
+- **Anchor.** An EMA of past user-query embeddings — `all-MiniLM-L6-v2` from sentence-transformers. The anchor decides what's relevant; ranking via two-stage substring + cosine fallback.
+- **Native compaction-aware.** If Claude Code triggers its own compaction, TINM detects it via `PreCompact` markers and cedes — no double-compression.
+- **No remote required for v0.1.** PCP is a local git repo; cross-host sync (Mac↔VPS via `tinm-pcp`) is a separate opt-in setup script.
+
+## Privacy
+
+Everything is local in `~/.tinm/` by default. Nothing leaves your machine unless you explicitly enable telemetry sharing (`tinm_telemetry.py on --share`) — and even then only **aggregate counts**, never prompts or file contents. The privacy contract is enforced and tested in [`mvp/tests/test_telemetry.py`](mvp/tests/test_telemetry.py).
 
 ## Status
 
-| Component | Status |
-|---|---|
-| Research substrate + paper draft | ~95% complete, BibTeX verification pending; EMNLP 2026 target |
-| 5 benchmarks (2 synthetic + MuSiQue 2/3-hop + 2WikiMultihopQA) | run, all comparisons p<0.05 |
-| MVP Phase 1 (Claude Code MCP + hooks + auto-init) | shipped, dogfooded since 2026-05-12 |
-| MVP Phase 2 (cross-machine via private git repo) | shipped 2026-05-13, see runbook |
-| Other MCP clients (Claude Desktop, Cursor, OpenClaw, Cline) | server reusable — see [`notes/clients_roadmap.md`](notes/clients_roadmap.md) for per-client plan and the open auto-persist-without-hooks question |
-| Claude.ai web + ChatGPT | gated on a remote MCP HTTPS endpoint (Claude.ai) or a Custom GPT actions wrapper (ChatGPT) — see roadmap |
+- **v0.1** — cross-session memory shipped and stable. **First external beta tester onboarding now.**
+- **v0.2** — intra-session digest (4-week ETA). See the design doc in `paper/` for the full mechanism.
+- **v1.0** — openClaw / Cursor / Claude Desktop client parity.
+
+## Try it
+
+After install:
+
+```bash
+# In any Claude Code session
+/tinm init my-project          # Create your first thread
+
+# Later, mark something for cross-session recall
+/tinm save "the architecture decision"
+
+# Inspect what TINM is tracking
+python ~/.claude/skills/tinm/tinm_status.py
+```
+
+Full DM-able walkthrough: [`docs/JORDAN_SETUP.md`](docs/JORDAN_SETUP.md).
+
+## Uninstall (fully reversible)
+
+```bash
+bash ~/.tinm/source/mvp/scripts/uninstall.sh
+```
+
+Leaves a `~/.claude/settings.json.pre-uninstall` backup so you can roll back manually if needed. `TINM_KEEP_PCP=1 bash ...` preserves your thread history at `~/tinm-pcp-keep-<ts>/`.
+
+## Repo layout
+
+- [`mvp/`](mvp/) — the Claude Code MVP (skills, hooks, scripts, tests). The thing you install.
+- [`benchmark/`](benchmark/) — research substrate. 5 long-context benchmarks comparing TINM-lite vs RAG baselines.
+- [`paper/`](paper/) — paper draft + figures ([Fig 1 Pareto plot](paper/figures/fig1_pareto.pdf)).
+- [`notes/`](notes/) — internal design notes and ADRs (not user-facing, but kept public for transparency).
+
+## Research
+
+TINM-lite (paper substrate) reaches **+0.114 F1** over a strong RAG baseline on 2WikiMultihopQA n=50 by carrying an EMA-anchor + trajectory across turns. The MVP applies the same mechanism to Claude Code sessions. Full evaluation in `paper/`.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
-## Citing
+## Contributing / feedback
 
-Paper currently in preparation. Once on arXiv, a BibTeX entry will land
-here. In the meantime, see `paper/draft.md` for the working draft.
+Beta v0.1 collects: *would you be upset if TINM disappeared tomorrow?* (Sean Ellis test). If you try it, please DM me what you noticed — magical, weird, or boring. That's the data this stage needs more than any commit.

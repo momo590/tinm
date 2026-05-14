@@ -4,7 +4,7 @@ Reads benchmark/runs/paper_results/table_pareto.csv and writes
 paper/figures/fig1_pareto.{pdf,png}.
 
 Usage:
-    /Users/user/TNIM/benchmark/.venv/bin/python paper/figures/make_fig1.py
+    benchmark/.venv/bin/python paper/figures/make_fig1.py
 """
 from __future__ import annotations
 
