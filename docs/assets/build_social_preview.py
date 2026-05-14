@@ -12,8 +12,14 @@ from __future__ import annotations
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
-# GitHub social preview canonical size.
-W, H = 1280, 640
+# GitHub social preview size. Two values are observed:
+#   1280×640 — what github.com docs say to use (sometimes rejected by
+#              the upload pipeline with "Something went really wrong")
+#   1200× 600 — what GitHub *itself* generates for repos without a
+#               custom social preview (via opengraph.githubassets.com)
+# We render at 1200×600 because that's the size GitHub's own pipeline
+# emits, and so the most certain to round-trip through the upload step.
+W, H = 1200, 600
 
 # GitHub-dark palette so the card reads naturally in both DM dark mode
 # and X dark mode (most power-users browse in dark).
@@ -56,8 +62,8 @@ def main() -> None:
     )
 
     # ── Terminal panel: the whoa moment, verbatim ────────────────────
-    term_x, term_y = 60, 260
-    term_w, term_h = W - 120, 280
+    term_x, term_y = 60, 245
+    term_w, term_h = W - 120, 260
     d.rounded_rectangle(
         [term_x, term_y, term_x + term_w, term_y + term_h],
         radius=12,
@@ -113,7 +119,7 @@ def main() -> None:
 
     # ── Footer: install one-liner + N=1 evidence callout ─────────────
     # Curl bar (subtle background strip)
-    curl_y = 565
+    curl_y = 535
     d.rectangle([0, curl_y - 15, W, curl_y + 45], fill="#010409")
     d.text(
         (60, curl_y),
