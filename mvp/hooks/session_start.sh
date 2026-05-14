@@ -23,12 +23,46 @@ VENV_PY="$TINM_HOME/.venv/bin/python"
 LOAD_SCRIPT="$HOME/.claude/skills/tinm/tinm_load.py"
 AUTO_INIT_SCRIPT="$HOME/.claude/skills/tinm/tinm_auto_init.py"
 
-# Phase 2 sync (best-effort): if the PCP store is a git repo, pull the
-# latest snapshot from the remote so this host's session starts with the
-# freshest threads/artifacts the peer pushed. Failure is silent — a
-# dropped network or transient remote error must not block the session.
+# Phase 2 sync (best-effort, v0.2.2): if the PCP store is a git repo, pull
+# the latest snapshot from the remote so this host's session starts with the
+# freshest threads/artifacts the peer pushed.
+#
+# v0.2.2 fix: --autostash only stashes TRACKED modifications. When Mac and
+# VPS independently create the same file path, pulling fails with
+# "untracked working tree files would be overwritten by checkout" — the
+# error was being silenced by 2>/dev/null and the user saw stale state.
+# Switch to explicit stash --include-untracked, log everything to a per-host
+# sync log, and reset working tree on pop conflict so the session is never
+# blocked. Failure is still non-fatal — a dropped network or transient
+# remote error must not block the session.
 if [ -d "$TINM_PCP_DIR/.git" ]; then
-    git -C "$TINM_PCP_DIR" pull --rebase --autostash --quiet 2>/dev/null || true
+    _SYNC_LOG="$TINM_HOME/sync-$(hostname).log"
+    _SYNC_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    {
+        echo "=== $_SYNC_TS session_start sync from $(hostname) ==="
+        _STASHED=0
+        if [ -n "$(git -C "$TINM_PCP_DIR" status --porcelain 2>/dev/null)" ]; then
+            git -C "$TINM_PCP_DIR" stash push --include-untracked \
+                -m "tinm-session-start-autostash-$_SYNC_TS" --quiet 2>&1 \
+                && _STASHED=1 || true
+        fi
+        if git -C "$TINM_PCP_DIR" pull --rebase --quiet 2>&1; then
+            _PULL_OK=1
+        else
+            _PULL_OK=0
+            echo "WARN: pull failed; aborting rebase if active"
+            git -C "$TINM_PCP_DIR" rebase --abort 2>&1 || true
+        fi
+        if [ "$_STASHED" = "1" ]; then
+            if ! git -C "$TINM_PCP_DIR" stash pop --quiet 2>&1; then
+                echo "WARN: stash pop conflict; resetting working tree, work preserved in stash list"
+                git -C "$TINM_PCP_DIR" checkout -- . 2>&1 || true
+                git -C "$TINM_PCP_DIR" clean -fd 2>&1 || true
+                git -C "$TINM_PCP_DIR" stash list 2>&1 | head -1
+            fi
+        fi
+        echo "=== exit (pull_ok=$_PULL_OK stashed=$_STASHED) ==="
+    } >> "$_SYNC_LOG" 2>&1 || true
 fi
 
 # Gstack-style update check (best-effort, 24h cached, silent on error).
