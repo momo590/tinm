@@ -29,31 +29,21 @@ Source: benchmark/runs/pilot_wiki2hop_results.json
 
 </details>
 
-This is a real recording (`docs/assets/replay.cast`), not a mockup. Reproducible after `bash install.sh` + `tinm_demo.py` (see [Try it](#try-it)).
+Reproducible after `bash install.sh` + `tinm_demo.py` (see [Try it](#try-it)). The cast source is at [`docs/assets/replay.cast`](docs/assets/replay.cast).
 
-macOS / Linux, ~3 minutes (most of it is `pip install`), fully reversible. The DM-friendly walkthrough is in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+macOS / Linux, ~3 minutes (most of it is `pip install`), fully reversible. The walkthrough is in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
-## What just happened
+## What it removes
 
-I shipped Phase 1 of the TINM paper yesterday — `+0.114 F1` on 2WikiMultihopQA. Today, new terminal, new Claude Code session, no `/tinm load`, no file open. I asked what we had measured. TINM surfaced the artifact and Claude quoted the number without reading anything. ~7000 tokens I didn't have to re-paste, on a single question. That is the whole pitch.
+Every new Claude Code session today starts with re-pasting yesterday's context: scrolling Slack, your last terminal, your own notes, then copy-pasting key decisions before any work begins. TINM does that step for you. It also avoids the alternative of growing `CLAUDE.md` until it becomes noise.
 
-## The pain TINM removes
+## How it works
 
-Re-coller le contexte au début de chaque session. You open Claude Code, you already know you're about to spend ten minutes searching Slack, scrolling yesterday's terminal, copy-pasting decisions back into the chat before any actual work starts. Power-users juggling three projects feel that several times a day. The current workarounds — letting CLAUDE.md grow into 800-line garbage, expanding `mem0` / `Letta` / `MemGPT` (none Claude-Code-native), or just typing the same paragraph again — all lose information and never compose.
+- **Hooks.** Three Claude Code hooks read and write a local store under `~/.tinm/`. Nothing else in your setup changes.
+- **PCP v0 storage.** Each thread is two JSON files (trajectory + named artifacts). The format is vendor-neutral so other clients can read the same threads. Spec: [`mvp/pcp_v0_spec.md`](mvp/pcp_v0_spec.md).
+- **Relevance.** When you send a new prompt, TINM ranks past artifacts against it and surfaces the matches into Claude's context — no manual `/load` required.
 
-## How it works (5 lines)
-
-- **Hooks.** Three Claude Code hooks (`SessionStart`, `UserPromptSubmit`, `PreCompact`+`PostCompact`) call short Python scripts that read/write `~/.tinm/pcp/`.
-- **PCP v0 — vendor-neutral storage format.** Two JSON files per thread (trajectory + artifacts). Spec at [`mvp/pcp_v0_spec.md`](mvp/pcp_v0_spec.md). A Claude Code thread today is the same file a Claude Desktop / openClaw / Cursor client can read tomorrow.
-- **Anchor.** An EMA (α=0.85) of past user-query embeddings — `all-MiniLM-L6-v2` from sentence-transformers. The anchor decides what's relevant; ranking is two-stage substring then cosine fallback.
-- **Native compaction-aware.** If Claude Code triggers its own compaction, TINM detects it via `PreCompact` markers and cedes — no double-compression.
-- **MCP server included.** TINM also exposes its anchor / artifact lookup as MCP tools (`current_thread`, `artifact_find`, `record_turn`) so non-Claude-Code clients can read the same threads. See [`mvp/clients/`](mvp/clients/).
-
-No remote required for v0.1 — PCP is a local git repo. Cross-host sync (Mac ↔ VPS via `tinm-pcp`) is a separate, optional setup script.
-
-## But won't Anthropic ship native semantic compaction?
-
-Probably. And when they do, TINM consumes it. The moat is not the mechanism, it's [PCP v0](mvp/pcp_v0_spec.md) — an open file format for cross-session, cross-client, cross-machine threads. TINM is one app on top of that standard. The standard survives anything Anthropic ships inside one client; the app gets thinner and more useful, not obsolete. If Claude Desktop, openClaw, Cursor, and ChatGPT all speak PCP, that's the layer worth building on.
+An MCP server is also included so clients beyond Claude Code can read the same threads ([`mvp/clients/`](mvp/clients/)). Cross-host sync (Mac ↔ VPS) ships as a separate, optional setup script.
 
 ## Status
 
