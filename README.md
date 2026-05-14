@@ -6,24 +6,30 @@
 curl -fsSL https://raw.githubusercontent.com/momo590/tinm/main/mvp/scripts/install.sh | bash
 ```
 
+![TINM — new session, yesterday's +0.114 F1 surfaces without reading any file](docs/assets/replay.gif)
+
+<details><summary>Read it instead of watching</summary>
+
 ```
-$ claude
-[TINM — Turn 1 | Anchor: tinm pareto wiki2hop phase1]
-> What was the biggest absolute effect we measured on the 2WikiMultihopQA pilot?
+# Yesterday I shipped Phase 1 of the TINM paper.
+# Today, new terminal, new session, no /load, no file open.
+# TINM seeded with `tinm demo` (see README).
 
-  tinm_a085 hit 0.481 — +0.114 absolute lift over rag_baseline, paired t=4.03.
-  (Surfaced from artifact wiki2hop-results; no file read.)
+$ claude -p "What was the biggest absolute effect we
+              measured on the 2WikiMultihopQA pilot?"
+**+0.114 absolute lift** for tinm_a085 over rag_baseline
+(t=4.03, paired, n=50). tinm_a085 scored 0.481 — the
+largest measured effect in the Phase 1 pilot set.
+
+Source: benchmark/runs/pilot_wiki2hop_results.json
+(per the loaded TINM thread).
+
+# +0.114 surfaced from yesterday — no file read, no context paste.
 ```
 
-<!--
-ASCIINEMA HERO — uncomment this block once docs/assets/replay.gif is recorded.
-Drop the static `docs/assets/replay.png` next to it as a thumbnail/mobile fallback.
-See mvp/seeds/build_tinm_tour.py for the exact prompt the cast reproduces.
+</details>
 
-![TINM replay scenario — new session surfaces yesterday's +0.114 F1 result without reading any file](docs/assets/replay.gif)
--->
-
-A real recording of the above will land here once the asciinema cast is filed. The text transcript above is canonical — every step is reproducible after `bash install.sh` + `tinm_demo.py` (see [Try it](#try-it)).
+This is a real recording (`docs/assets/replay.cast`), not a mockup. Reproducible after `bash install.sh` + `tinm_demo.py` (see [Try it](#try-it)).
 
 macOS / Linux, ~3 minutes (most of it is `pip install`), fully reversible. The DM-friendly walkthrough is in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
