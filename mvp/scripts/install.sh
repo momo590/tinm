@@ -56,7 +56,7 @@ case "$(uname -s)" in
     Linux)  PLATFORM="Linux" ;;
     *)
         echo "✗ Unsupported platform: $(uname -s). TINM supports macOS and Linux." >&2
-        echo "  Windows support is on the roadmap — DM the maintainer if you'd like it sooner." >&2
+        echo "  Windows support is on the roadmap — DM @momo590 on X if you'd like it sooner." >&2
         exit 1
         ;;
 esac
