@@ -119,3 +119,32 @@ fi
 echo
 echo "OK: git-sync ready."
 echo "    Hooks will pull at SessionStart and push after each UserPromptSubmit."
+
+setup_gstack_sync() {
+  local pcp_dir="${TINM_PCP_DIR:-$PCP}"
+  local gstack_dir="${HOME}/.gstack/projects/tinm"
+  local synced_dir="${pcp_dir}/gstack-projects/tinm"
+
+  if [ -z "${pcp_dir}" ]; then
+    echo "ERROR: TINM_PCP_DIR not set" >&2
+    return 1
+  fi
+
+  mkdir -p "${synced_dir}"
+
+  if [ -d "${gstack_dir}" ] && [ ! -L "${gstack_dir}" ]; then
+    if [ "$(ls -A "${gstack_dir}" 2>/dev/null)" ]; then
+      echo "Migrating existing ${gstack_dir} into tinm-pcp..."
+      rsync -av "${gstack_dir}/" "${synced_dir}/" || return 1
+    fi
+    mv "${gstack_dir}" "${gstack_dir}.pre-sync-backup-$(date +%Y%m%d-%H%M%S)"
+  fi
+
+  mkdir -p "$(dirname "${gstack_dir}")"
+  [ -L "${gstack_dir}" ] && rm "${gstack_dir}"
+  ln -s "${synced_dir}" "${gstack_dir}"
+
+  echo "✓ ${gstack_dir} → ${synced_dir}"
+}
+
+setup_gstack_sync

@@ -44,6 +44,23 @@ PROMPT_TEXT="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
     2>/dev/null)"
 [ -n "$PROMPT_TEXT" ] || exit 0
 
+# Heuristic log for native-compaction detection fallback. Consumed by
+# digest_generator._heuristic_compaction_from_log() when the PreCompact
+# marker is absent (e.g., hook not yet installed on peer host, or
+# pre-marker session). Cheap: one wc -l + one printf >> file.
+TRANSCRIPT_PATH="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
+    'import json, sys; print(json.load(sys.stdin).get("transcript_path", ""), end="")' \
+    2>/dev/null)"
+SESSION_ID="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
+    'import json, sys; print(json.load(sys.stdin).get("session_id", ""), end="")' \
+    2>/dev/null)"
+if [ -n "$TRANSCRIPT_PATH" ] && [ -r "$TRANSCRIPT_PATH" ] && [ -n "$SESSION_ID" ]; then
+    N_MSG="$(wc -l < "$TRANSCRIPT_PATH" 2>/dev/null | tr -d ' ')"
+    [ -n "$N_MSG" ] && printf '{"ts":"%s","session_id":"%s","n_messages":%s}\n' \
+        "$(date -u +%FT%TZ)" "$SESSION_ID" "$N_MSG" \
+        >> "$TINM_PCP_DIR/transcript_size.jsonl" 2>/dev/null || true
+fi
+
 # Run the update. stdout flows through to Claude's context (trajectory
 # hint). stderr is suppressed. The || true ensures hook exit code is 0.
 "$VENV_PY" "$UPDATE_SCRIPT" "$THREAD_ID" \
@@ -60,7 +77,7 @@ PROMPT_TEXT="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
 # already persisted, so a missed push just delays propagation.
 if [ -d "$TINM_PCP_DIR/.git" ]; then
     (
-        git -C "$TINM_PCP_DIR" add threads/ artifacts/ 2>/dev/null || true
+        git -C "$TINM_PCP_DIR" add threads/ artifacts/ compaction_markers/ gstack-projects/ 2>/dev/null || true
         if ! git -C "$TINM_PCP_DIR" diff --cached --quiet; then
             git -C "$TINM_PCP_DIR" commit -m "auto: turn @ $(date -u +%FT%TZ) from $(hostname -s)" --quiet
             git -C "$TINM_PCP_DIR" push --quiet 2>/dev/null
