@@ -128,6 +128,30 @@ class TestDisambiguationInstruction:
 # Test: _top_query_terms helper
 # ---------------------------------------------------------------------------
 
+class TestAnaphoraDetection:
+    def test_english_anaphora_detected(self):
+        """English pronouns trigger anaphora detection."""
+        from tinm_update import _ANAPHORIC_TOKEN_RE
+        assert _ANAPHORIC_TOKEN_RE.search("it works now")
+        assert _ANAPHORIC_TOKEN_RE.search("they are correct")
+        assert _ANAPHORIC_TOKEN_RE.search("this is fine")
+
+    def test_french_anaphora_detected(self):
+        """French pronouns trigger anaphora detection."""
+        from tinm_update import _ANAPHORIC_TOKEN_RE
+        assert _ANAPHORIC_TOKEN_RE.search("ça marche vraiment")
+        assert _ANAPHORIC_TOKEN_RE.search("cela est correct")
+        assert _ANAPHORIC_TOKEN_RE.search("celui-ci fonctionne")
+        assert _ANAPHORIC_TOKEN_RE.search("est-ce que ça marche ?")
+
+    def test_no_false_positives_on_plain_content(self):
+        """Non-anaphoric French/English queries don't match."""
+        from tinm_update import _ANAPHORIC_TOKEN_RE
+        # Pure noun phrase with no pronoun
+        assert not _ANAPHORIC_TOKEN_RE.search("benchmark résultats TINM")
+        assert not _ANAPHORIC_TOKEN_RE.search("install dependencies venv")
+
+
 class TestTopQueryTerms:
     def test_extracts_top_terms_from_user_queries(self):
         """Extracts frequent non-stopword terms from user turns."""

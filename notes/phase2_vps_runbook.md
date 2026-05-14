@@ -7,7 +7,7 @@ do the sync transparently:
 
 - `SessionStart` → `git pull --rebase --autostash` (best-effort, silent).
 - `UserPromptSubmit` → after the turn is persisted locally, fork a
-  background `git add -A && git commit && git push`.
+  background `git add threads/ artifacts/ && git commit && git push`.
 
 Per `mvp/pcp_v0_spec.md` §5, sync remains a filesystem-tool concern;
 this just picks git as the tool. Conflicts (rare under single-user
@@ -111,6 +111,57 @@ git reset --hard origin/main
 
 (`git reset --hard` is local-only here — it discards in-progress local
 turns, not remote ones.)
+
+---
+
+## Claude Desktop Mac (hooks not supported)
+
+The Claude Code hooks (`SessionStart`, `UserPromptSubmit`) only fire in
+Claude Code CLI / desktop app in "Claude Code" mode. The macOS **Claude
+Desktop** app (claude.ai/desktop) does **not** run hooks.
+
+TINM still works on Claude Desktop via the MCP server. Two setup steps:
+
+### Step 1 — Register the MCP server in Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`
+and add the `tinm` entry to `mcpServers` (same JSON block you have in
+`~/.claude.json`):
+
+```json
+{
+  "mcpServers": {
+    "tinm": {
+      "command": "/Users/<you>/.tinm/.venv/bin/python",
+      "args": ["/Users/<you>/TNIM/mvp/mcp_server/tinm_server.py"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. The `tinm.*` tools and the `tinm://current-thread`
+resource should now appear.
+
+### Step 2 — Add the universal system prompt
+
+In Claude Desktop: **Settings → Custom Instructions** → paste the full
+contents of [`mvp/clients/UNIVERSAL_SYSTEM_PROMPT.md`](../mvp/clients/UNIVERSAL_SYSTEM_PROMPT.md)
+(the code block inside it, verbatim).
+
+### What this covers
+
+| Feature | Claude Code (hooks) | Claude Desktop (MCP only) |
+|---|---|---|
+| Session start context | `SessionStart` hook | `tinm://current-thread` resource (auto-loaded) |
+| Per-turn trajectory | `UserPromptSubmit` hook | `record_turn` called by Claude per system prompt |
+| Artifact find/add | `mcp__tinm__artifact_find/add` | same MCP tools |
+| Phase 2 git sync | hooks push/pull | NOT automatic — Claude would need to trigger it or you run `git push` manually from terminal |
+
+**Note on Phase 2 + Claude Desktop**: the background git push in
+`user_prompt.sh` doesn't fire from Claude Desktop. If you want cross-machine
+sync to also propagate Claude Desktop turns, run `git push` manually in
+`$TINM_PCP_DIR` after important sessions, or accept that Claude Desktop turns
+sync at the next Claude Code session start.
 
 ---
 

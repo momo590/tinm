@@ -46,11 +46,17 @@ owns the decision.
      small MCP server that exposes the same `~/.tinm/threads/`
      directory to Claude.ai. Once a second client reads/writes the
      same thread cleanly, v0.1 is validated and v0.2 can begin.
-   - Address known v0.1 gaps: anaphora regex is English-only (the user
-     mixes FR/EN), the OpenSSL warning on the venv is cosmetic but
-     noisy, the model load latency (~2s) per script invocation is fine
-     for `/tinm load` but heavy if called on every turn — a Python
-     daemon sidecar would amortise.
+   - Address known v0.1 gaps:
+     - ~~Anaphora regex English-only~~ — **FIXED** 2026-05-13: FR pronouns
+       added to `_ANAPHORIC_TOKEN_RE` in `tinm_update.py`.
+     - OpenSSL warning on the venv: cosmetic, noisy. Low priority.
+     - **Model cold-start (~2-5s, background)**: `tinm_update.py` loads
+       sentence-transformers fresh on every hook invocation. Invisible
+       to the user (background), but risks timeout on slow machines.
+       Fix when confirmed in prod: daemon sidecar (MVP v1.5).
+     - **Claude Desktop git sync gap**: background push in
+       `user_prompt.sh` doesn't fire from Claude Desktop. Workaround:
+       manual `git push` in `$TINM_PCP_DIR`. Documented in runbook.
 
 3. **Future research follow-ups** — not for this session, but listed in
    the experimental roadmap (§L1–L4): multi-turn friction detection (now

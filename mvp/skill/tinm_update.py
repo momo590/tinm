@@ -54,9 +54,14 @@ _STOPWORDS = frozenset({
 
 _ANAPHORIC_TOKEN_RE = re.compile(
     r"\b("
+    # English
     r"it|its|itself|they|them|their|theirs|themselves|"
     r"this|that|these|those|"
-    r"he|him|his|himself|she|her|hers|herself"
+    r"he|him|his|himself|she|her|hers|herself|"
+    # French
+    r"ça|cela|celui|celle|ceux|celles|lequel|laquelle|"
+    r"lesquels|lesquelles|duquel|auquel|"
+    r"ce|y|en"
     r")\b",
     re.IGNORECASE,
 )

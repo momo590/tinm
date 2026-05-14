@@ -29,17 +29,6 @@ CURRENT_FILE="$TINM_HOME/current_thread"
 VENV_PY="$TINM_HOME/.venv/bin/python"
 UPDATE_SCRIPT="$HOME/.claude/skills/tinm/tinm_update.py"
 
-# Phase 2 sync (inbound, best-effort): if the PCP store is a git repo,
-# pull the latest snapshot from the remote BEFORE writing this turn, so
-# we never overwrite (or commit on top of) a peer host's commit. This
-# closes the timing-race window we hit on 2026-05-13 where a fresh Mac
-# session pulled at SessionStart, then a VPS turn pushed, and the Mac
-# missed it until the next session start. With a pre-turn pull the gap
-# is at most one turn. Failure is silent — we proceed with local state.
-if [ -d "$TINM_PCP_DIR/.git" ]; then
-    git -C "$TINM_PCP_DIR" pull --rebase --autostash --quiet 2>/dev/null || true
-fi
-
 # No current thread → nothing to do.
 [ -r "$CURRENT_FILE" ] || exit 0
 THREAD_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
@@ -71,7 +60,7 @@ PROMPT_TEXT="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
 # already persisted, so a missed push just delays propagation.
 if [ -d "$TINM_PCP_DIR/.git" ]; then
     (
-        git -C "$TINM_PCP_DIR" add -A
+        git -C "$TINM_PCP_DIR" add threads/ artifacts/ 2>/dev/null || true
         if ! git -C "$TINM_PCP_DIR" diff --cached --quiet; then
             git -C "$TINM_PCP_DIR" commit -m "auto: turn @ $(date -u +%FT%TZ) from $(hostname -s)" --quiet
             git -C "$TINM_PCP_DIR" push --quiet 2>/dev/null
