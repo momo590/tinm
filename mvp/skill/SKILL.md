@@ -44,6 +44,26 @@ commands below always use both absolute paths.
 | `~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_update.py <thread_id> --query "..." [--role user]` | Append a turn to the trajectory, EMA-update the anchor with the configured α (default 0.85), respecting the L1 activation threshold (turn ≥ 3 OR anaphora detected in the query). |
 | `~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_artifact.py <thread_id> add --id <slug> --name "..." --ref "..." --summary "..." [--alias "..." --alias "..."]` | Register a named artifact (file path, plot, table, …) so later turns can resolve "like the X we did". |
 | `~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_artifact.py <thread_id> find "<query>" [--k N]` | Look up an artifact by alias substring (cheap) or by cosine similarity on the embedding (fallback). |
+| `~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_demo.py [--reset|--remove]` | Install (or remove) the bundled `tinm-tour` demo thread so a fresh installer can experience the cross-session-recall whoa moment without 24h of real usage first. Idempotent; `--reset` re-imports. |
+
+## First-install demo (`/tinm demo`)
+
+A first-time installer has an empty PCP store, so cross-session recall
+cannot fire yet. When the user runs `/tinm demo` (or asks something like
+"how do I see the demo / try it / show me the whoa moment"), run
+`tinm_demo.py` via Bash and then tell the user verbatim:
+
+> Open a fresh Claude Code session and paste:
+>
+> "What was the biggest absolute effect we measured on the 2WikiMultihopQA pilot?"
+>
+> TINM will surface the `wiki2hop-results` artifact (`+0.114 F1, t=4.03`)
+> without reading any file. That is the whoa moment the README promises.
+
+The seed lives at `mvp/seeds/tinm-tour/` in the TINM repo and is copied
+to the user's PCP store on demand. It also sets `~/.tinm/current_thread`
+so the next session picks it up automatically. The demo is removable
+with `--remove` without touching the user's real threads.
 
 ## Typical session opening
 
