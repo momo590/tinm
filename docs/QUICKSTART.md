@@ -106,7 +106,7 @@ deleted.
 
 ## Feedback (the data this stage actually needs)
 
-If you tried it: DM [@momo590](https://x.com/momo590) on X with the
+If you tried it: DM [@Makhtar89043272](https://x.com/Makhtar89043272) on X with the
 one thing that surprised you, broke for you, or did nothing for you.
 Beta v0.1 is collecting Sean Ellis answers — *would you be upset if
 TINM disappeared tomorrow?* A 1-line "yes because X" or "no because

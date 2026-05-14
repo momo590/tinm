@@ -56,7 +56,7 @@ case "$(uname -s)" in
     Linux)  PLATFORM="Linux" ;;
     *)
         echo "✗ Unsupported platform: $(uname -s). TINM supports macOS and Linux." >&2
-        echo "  Windows support is on the roadmap — DM @momo590 on X if you'd like it sooner." >&2
+        echo "  Windows support is on the roadmap — DM @Makhtar89043272 on X if you'd like it sooner." >&2
         exit 1
         ;;
 esac
@@ -271,7 +271,7 @@ Telemetry status (opt-in, local-only by default):
 Uninstall (fully reversible):
   bash $TINM_SOURCE/mvp/scripts/uninstall.sh
 
-Feedback or issues: DM @momo590 on X — even a 1-line "this surprised
-me" or "this broke" is exactly what beta v0.1 needs.
+Feedback or issues: DM @Makhtar89043272 on X — even a 1-line "this
+surprised me" or "this broke" is exactly what beta v0.1 needs.
 
 EOF

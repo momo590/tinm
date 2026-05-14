@@ -116,4 +116,4 @@ MIT — see [LICENSE](LICENSE).
 
 ## Contributing / feedback
 
-Beta v0.1 collects: *would you be upset if TINM disappeared tomorrow?* (Sean Ellis test). If you try it, **DM [@momo590](https://x.com/momo590) on X** what you noticed — magical, weird, boring, or broken. That is the data this stage needs more than any commit.
+Beta v0.1 collects: *would you be upset if TINM disappeared tomorrow?* (Sean Ellis test). If you try it, **DM [@Makhtar89043272](https://x.com/Makhtar89043272) on X** what you noticed — magical, weird, boring, or broken. That is the data this stage needs more than any commit.
