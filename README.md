@@ -53,18 +53,20 @@ An MCP server is also included so clients beyond Claude Code can read the same t
 
 ## Try it
 
-The whoa moment in the GIF up top can fire for you in minute 2 — no need to wait 24h for cross-session recall on your own data. After install:
+The install ships a short demo thread so you can see cross-session recall on bundled sample data, without first having to accumulate your own history.
 
 ```bash
 # 1. Verify the hooks loaded
 ~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_status.py
 
-# 2. Install the bundled demo thread
+# 2. Install the bundled demo thread (a real research session from the TINM paper)
 ~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_demo.py
 
-# 3. Open a fresh Claude Code session and paste:
+# 3. Open a fresh Claude Code session and paste this prompt verbatim:
 #    "What was the biggest absolute effect we measured on the 2WikiMultihopQA pilot?"
 ```
+
+Claude will answer with a specific number from the demo's stored artifacts — one it could not have produced without TINM pulling that artifact into its context. That's the mechanism: prior-session content surfaced into a fresh session, no manual load, no file read.
 
 When you're ready to use TINM on your own work:
 

@@ -235,22 +235,23 @@ cat <<EOF
 
 Verify the install before starting work:
     $TINM_VENV/bin/python $CLAUDE_SKILLS_DIR/tinm_status.py
-You should see: "hooks loaded" and 0 threads / 0 artifacts. That means
+You should see "hooks loaded" and 0 threads / 0 artifacts. That means
 TINM is wired into Claude Code's hooks and the PCP store is ready.
 
 Then, in this order:
 
   1. Restart Claude Code (or Claude Desktop) so it loads the new hooks.
 
-  2. Try the whoa moment without waiting 24h for cross-session recall
-     to fire on your own data. Run:
+  2. See cross-session recall work on bundled sample data:
          $TINM_VENV/bin/python $CLAUDE_SKILLS_DIR/tinm_demo.py
-     to install the bundled "tinm-tour" demo thread, then in a fresh
-     Claude Code session paste:
+     This installs a short demo thread (a real research session from
+     the TINM paper). Open a fresh Claude Code session, then paste
+     verbatim:
          "What was the biggest absolute effect we measured on the
           2WikiMultihopQA pilot?"
-     Watch the [TINM ...] hook line surface BEFORE Claude responds.
-     TINM will quote +0.114 F1, t=4.03 without reading any file.
+     Claude will answer with a specific number from the demo's
+     stored artifacts — one it could not have produced without TINM
+     pulling that artifact into context.
 
   3. When you're ready to start your own work:
          /tinm init my-first-thread
