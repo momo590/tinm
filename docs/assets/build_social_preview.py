@@ -122,8 +122,16 @@ def main() -> None:
         fill=DIM,
     )
 
-    img.save(out, "PNG", optimize=True)
-    print(f"wrote {out} ({out.stat().st_size // 1024} KB, {W}×{H})")
+    # Save as both PNG (no optimize, vanilla sRGB) and JPG. GitHub's
+    # Social preview pipeline rejects some optimize-True PNGs with a
+    # generic "Something went really wrong" error; vanilla PNG and JPG
+    # both work reliably. Try uploading the JPG first.
+    out_png = out.with_suffix(".png")
+    out_jpg = out.with_suffix(".jpg")
+    img.save(out_png, "PNG")
+    img.convert("RGB").save(out_jpg, "JPEG", quality=92, optimize=False)
+    print(f"wrote {out_png} ({out_png.stat().st_size // 1024} KB, {W}×{H})")
+    print(f"wrote {out_jpg} ({out_jpg.stat().st_size // 1024} KB, {W}×{H})")
 
 
 if __name__ == "__main__":
