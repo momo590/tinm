@@ -20,45 +20,17 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 from tinm_paths import ARTIFACTS_DIR, THREADS_DIR
-
-
-EXPECTED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-EXPECTED_DIM = 384
-
-_MODEL = None
+from tinm_scoring import EXPECTED_DIM, _encode, rank_artifacts
 
 
 def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-
-
-def _get_model():
-    global _MODEL
-    if _MODEL is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError as e:
-            print(
-                "error: sentence-transformers not installed. "
-                "See mvp/README.md for install instructions.",
-                file=sys.stderr,
-            )
-            raise SystemExit(1) from e
-        _MODEL = SentenceTransformer(EXPECTED_MODEL)
-    return _MODEL
-
-
-def _encode(text: str) -> list[float]:
-    import numpy as np
-    vec = _get_model().encode(text, convert_to_numpy=True, show_progress_bar=False)
-    return [float(x) for x in np.asarray(vec).ravel()]
 
 
 def _atomic_write_json(path: Path, payload: dict) -> None:
@@ -136,60 +108,9 @@ def cmd_add(
     return entry
 
 
-def _normalise(s: str) -> str:
-    return re.sub(r"\s+", " ", s.strip().lower())
-
-
-def _substring_score(query: str, candidates: list[str]) -> float:
-    """1.0 if any candidate is a substring of query (or vice versa), else 0.0."""
-    q = _normalise(query)
-    if not q:
-        return 0.0
-    for c in candidates:
-        cn = _normalise(c)
-        if not cn:
-            continue
-        if cn in q or q in cn:
-            return 1.0
-    return 0.0
-
-
-def _cosine(a: list[float], b: list[float]) -> float:
-    import numpy as np
-    av = np.asarray(a, dtype=float)
-    bv = np.asarray(b, dtype=float)
-    denom = (float(np.linalg.norm(av)) * float(np.linalg.norm(bv))) + 1e-9
-    return float(np.dot(av, bv) / denom)
-
-
 def cmd_find(thread_id: str, query: str, k: int = 3) -> list[dict]:
     artifacts, _ = _load_artifacts(thread_id)
-    arts = artifacts.get("artifacts", [])
-    if not arts:
-        return []
-
-    # Stage 1: substring (cheap)
-    substring_hits: list[tuple[float, dict]] = []
-    for a in arts:
-        candidates = [a["name"]] + list(a.get("aliases") or [])
-        score = _substring_score(query, candidates)
-        if score > 0:
-            substring_hits.append((score, a))
-    if substring_hits:
-        substring_hits.sort(key=lambda x: -x[0])
-        return [{"score": s, "match_kind": "substring", **a} for s, a in substring_hits[:k]]
-
-    # Stage 2: embedding fallback (only if at least one artifact has an embedding)
-    embedded = [a for a in arts if a.get("embedding")]
-    if not embedded:
-        return []
-
-    query_vec = _encode(query)
-    ranked = sorted(
-        ((_cosine(query_vec, a["embedding"]), a) for a in embedded),
-        key=lambda x: -x[0],
-    )
-    return [{"score": s, "match_kind": "embedding", **a} for s, a in ranked[:k]]
+    return rank_artifacts(artifacts.get("artifacts", []), query, k=k)
 
 
 def _format_hits_md(hits: list[dict]) -> str:
