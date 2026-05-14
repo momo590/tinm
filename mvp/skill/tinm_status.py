@@ -8,6 +8,7 @@ from pathlib import Path
 
 from lockfile import pcp_lock
 from tinm_paths import CURRENT_FILE, THREADS_DIR, TINM_PCP_DIR
+from tinm_telemetry import log_event
 
 
 def show_status(thread_id: str) -> None:
@@ -71,6 +72,9 @@ def main() -> None:
     if not thread_id:
         print("No thread ID found.", file=sys.stderr)
         sys.exit(1)
+
+    action = "status_reset_anchor" if args.reset_anchor else "status"
+    log_event("user_explicit_action", {"action": action})
 
     if args.reset_anchor:
         reset_anchor(thread_id)

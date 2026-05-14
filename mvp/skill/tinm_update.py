@@ -26,8 +26,11 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+from contextlib import nullcontext
+
 from lockfile import pcp_lock
 from tinm_paths import THREADS_DIR, TINM_PCP_DIR
+from tinm_telemetry import measure_latency
 
 
 EXPECTED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
@@ -298,33 +301,37 @@ def main() -> None:
                         help="Use fixed α instead of adaptive friction-based α.")
     parser.add_argument("--emit-hint", action="store_true",
                         help="Print trajectory hint to stdout for injection into Claude's context.")
+    parser.add_argument("--telemetry", default=None, metavar="HOOK_NAME",
+                        help="If set, record latency_added_ms for the given hook (Lane H).")
     args = parser.parse_args()
 
-    try:
-        result = update_thread(
-            args.thread_id,
-            query=args.query,
-            role=args.role,
-            client=args.client,
-            adaptive=not args.no_adaptive,
-            emit_hint=args.emit_hint,
-        )
-    except (FileNotFoundError, RuntimeError) as e:
-        print(f"error: {e}", file=sys.stderr)
-        sys.exit(1)
+    ctx = measure_latency(args.telemetry) if args.telemetry else nullcontext()
+    with ctx:
+        try:
+            result = update_thread(
+                args.thread_id,
+                query=args.query,
+                role=args.role,
+                client=args.client,
+                adaptive=not args.no_adaptive,
+                emit_hint=args.emit_hint,
+            )
+        except (FileNotFoundError, RuntimeError) as e:
+            print(f"error: {e}", file=sys.stderr)
+            sys.exit(1)
 
-    if args.emit_hint:
-        # In hint mode: print the hint (or nothing if L1 not engaged).
-        # Never print stats — they would be injected into Claude's context.
-        if result.get("hint_text"):
-            print(result["hint_text"])
-    else:
-        print(
-            f"turn {result['turn']}: α={result['alpha_used']:.3f}, "
-            f"L1_engaged={result['l1_engaged']}, "
-            f"engaged_so_far={result['engaged_so_far']}, "
-            f"anchor_updates={result['anchor_update_count']}"
-        )
+        if args.emit_hint:
+            # In hint mode: print the hint (or nothing if L1 not engaged).
+            # Never print stats — they would be injected into Claude's context.
+            if result.get("hint_text"):
+                print(result["hint_text"])
+        else:
+            print(
+                f"turn {result['turn']}: α={result['alpha_used']:.3f}, "
+                f"L1_engaged={result['l1_engaged']}, "
+                f"engaged_so_far={result['engaged_so_far']}, "
+                f"anchor_updates={result['anchor_update_count']}"
+            )
 
 
 if __name__ == "__main__":

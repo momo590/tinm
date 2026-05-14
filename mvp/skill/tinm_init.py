@@ -24,6 +24,7 @@ from pathlib import Path
 
 from lockfile import pcp_lock
 from tinm_paths import ARTIFACTS_DIR, CURRENT_FILE, THREADS_DIR, TINM_PCP_DIR
+from tinm_telemetry import log_event
 
 
 PCP_VERSION = "0.1"
@@ -125,6 +126,8 @@ def main() -> None:
     parser.add_argument("--title", required=True, help="Human-readable thread title.")
     parser.add_argument("--project-root", default=None, help="Optional absolute path.")
     args = parser.parse_args()
+
+    log_event("user_explicit_action", {"action": "init"})
 
     try:
         path = init_thread(args.thread_id, args.title, args.project_root)

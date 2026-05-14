@@ -28,6 +28,7 @@ from pathlib import Path
 from lockfile import pcp_lock
 from tinm_paths import ARTIFACTS_DIR, THREADS_DIR, TINM_PCP_DIR
 from tinm_scoring import EXPECTED_DIM, _encode, rank_artifacts
+from tinm_telemetry import log_event
 
 
 def _utcnow() -> str:
@@ -112,7 +113,31 @@ def cmd_add(
 
 def cmd_find(thread_id: str, query: str, k: int = 3) -> list[dict]:
     artifacts, _ = _load_artifacts(thread_id)
-    return rank_artifacts(artifacts.get("artifacts", []), query, k=k)
+    hits = rank_artifacts(artifacts.get("artifacts", []), query, k=k)
+    if hits:
+        # Lane H telemetry — cross_session_hit + tokens_saved_estimated.
+        # thread_id truncated to 64 chars by _validate_payload, but we also
+        # trim to 32 here as a defense-in-depth nod (slugs are <=64 chars
+        # by SLUG_RE, but artifact_find can be called from any consumer).
+        log_event("cross_session_hit", {
+            "thread_id": thread_id[:32],
+            "k_results": len(hits),
+            "top_score": float(hits[0].get("score", 0.0)),
+        })
+        # Heuristic: chars ÷ 4 ≈ tokens. Multiplier 5 from the +0.114-F1
+        # demo (~6-9k tokens saved on a ~1.5k injected lookup). Calibrate
+        # later from real telemetry once N≥3 users.
+        injected_chars = sum(
+            len(h.get("summary", "")) + len(h.get("name", ""))
+            for h in hits
+        )
+        tokens_injected = max(1, injected_chars // 4)
+        log_event("tokens_saved_estimated", {
+            "tokens_injected": tokens_injected,
+            "tokens_avoided_estimated": tokens_injected * 5,
+            "source": "artifact_find",
+        })
+    return hits
 
 
 def _format_hits_md(hits: list[dict]) -> str:
@@ -150,6 +175,8 @@ def main() -> None:
     find.add_argument("--k", type=int, default=3)
 
     args = parser.parse_args()
+
+    log_event("user_explicit_action", {"action": f"artifact_{args.cmd}"})
 
     try:
         if args.cmd == "add":

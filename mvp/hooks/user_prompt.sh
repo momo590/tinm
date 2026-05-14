@@ -64,11 +64,14 @@ fi
 
 # Run the update. stdout flows through to Claude's context (trajectory
 # hint). stderr is suppressed. The || true ensures hook exit code is 0.
+# --telemetry wraps the call in measure_latency() (Lane H) — no-op
+# if the user has opted out of telemetry.
 "$VENV_PY" "$UPDATE_SCRIPT" "$THREAD_ID" \
     --query "$PROMPT_TEXT" \
     --role user \
     --client claude-code \
     --emit-hint \
+    --telemetry user_prompt_submit \
     2>/dev/null || true
 
 # Phase 2 sync (best-effort, background): if the PCP store is a git
