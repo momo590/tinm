@@ -1,75 +1,78 @@
 # TINM Clipboard Watcher
 
-> Universal fallback adapter — captures AI conversations from any tool (ChatGPT web, Claude.ai web, Perplexity, Notion AI, …) via opt-in clipboard trigger.
+> Universal capture for AI conversations from any tool (ChatGPT web, Claude.ai, Perplexity, Notion AI, Gemini, …). Opt-in trigger phrase. Auto-starts with Claude Code. Native system notification on capture.
 
-## How it works
-
-The clipboard watcher polls your system clipboard. When it sees the trigger phrase `# TINM SAVE` on the first line, it captures everything after that line into your current TINM thread.
-
-**Privacy**: TINM only reads clipboard content that explicitly starts with `# TINM SAVE`. Without the trigger, your clipboard is ignored. The trigger line is stripped before capture (not stored).
-
-## Install
-
-The clipboard watcher is bundled — no extra install needed if you already have TINM.
-
-**Dependencies** (one of):
-- macOS: `pbpaste` (built-in)
-- Linux X11: `xclip` (`apt install xclip`) or `xsel`
-- Linux Wayland: `wl-paste` (part of `wl-clipboard` package)
-
-## Usage
-
-### One-shot mode (manual)
+## Quick start (1 command, then forget it)
 
 ```bash
-~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_clipboard.py --once
+~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_clipboard.py --enable
 ```
 
-Checks your clipboard once and exits. Good to wire into other tools or as a manual capture trigger.
+That's it. From now on, every time you open Claude Code, the watcher starts in the background. When you copy something starting with `# TINM SAVE`, you get a desktop notification and the content lands in your current TINM thread.
 
-### Daemon mode (background polling)
+## How to capture
+
+1. In ChatGPT / Claude.ai / Perplexity / wherever, select the conversation text you want to save.
+2. Open a text editor (or just use the URL bar). Type:
+   ```
+   # TINM SAVE
+   <paste your conversation here>
+   ```
+3. Select all (Cmd+A / Ctrl+A) and copy (Cmd+C / Ctrl+C).
+4. **Within ~3 seconds**, a system notification appears: `TINM captured to <thread>`. Done.
+
+## Privacy
+
+- The watcher does **nothing** unless your clipboard's first non-empty line is exactly `# TINM SAVE` (case-insensitive).
+- The trigger line is stripped before storage — not stored.
+- Clipboard is read, never modified.
+- Duplicate captures (re-copying the same content) are silently skipped.
+
+## Commands
 
 ```bash
-~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_clipboard.py --watch &
-```
-
-Polls every 3 seconds in the background. Add to your shell startup if you want it always-on.
-
-```bash
-# Check daemon status
+# Status — opt-in state + daemon state
 python ~/.claude/skills/tinm/tinm_clipboard.py --status
 
-# Stop the daemon
+# Manually trigger one capture check (useful for testing)
+python ~/.claude/skills/tinm/tinm_clipboard.py --once
+
+# Stop the daemon (will restart on next Claude Code session if still enabled)
 python ~/.claude/skills/tinm/tinm_clipboard.py --stop
+
+# Fully opt-out (stops daemon + prevents auto-start)
+python ~/.claude/skills/tinm/tinm_clipboard.py --disable
 ```
 
-### How to capture a conversation
+## Notifications
 
-1. In ChatGPT/Claude.ai/Perplexity/wherever, select the conversation text you want to save.
-2. Copy it to clipboard.
-3. **Prepend `# TINM SAVE`** as the first line. For example, paste into a scratch text editor first, add the trigger, then re-copy:
+Native to your OS:
+- **macOS**: AppleScript `display notification` (appears top-right via Notification Center)
+- **Linux**: `notify-send` (requires `libnotify-bin` or equivalent — `apt install libnotify-bin`)
 
-```
-# TINM SAVE
-
-Q: How do I implement OAuth in Next.js?
-A: Use next-auth. Install with `npm i next-auth`, then create...
-```
-
-4. The watcher will detect the trigger and capture everything after into your current TINM thread.
-
-## Verification
-
-Make sure TINM has a current thread loaded:
+If notifications don't appear, capture still works — only the visual feedback is gone. To verify:
 
 ```bash
-cat ~/.tinm/current_thread
+cat ~/.tinm/pcp/threads/$(cat ~/.tinm/current_thread).json | tail -20
 ```
 
-If empty, run `tinm load <thread>` first. Captured content lands in your thread's trajectory and becomes searchable via `artifact_find`.
+The last entry should be your capture.
+
+## Dependencies (clipboard read)
+
+Auto-detected based on platform:
+- macOS: `pbpaste` (built-in)
+- Linux X11: `xclip` (`apt install xclip`) or `xsel`
+- Linux Wayland: `wl-paste` (`apt install wl-clipboard`)
+
+## How the auto-start works
+
+When you run `--enable` once, TINM creates `~/.tinm/clipboard_enabled` (a marker file). The Claude Code `SessionStart` hook checks for this file every time you open Claude Code — if present and no daemon is running, it launches one as a detached background process. Survives Claude Code session exit. Restarts cleanly the next time you open Claude Code.
+
+No `launchd`, no systemd, no per-OS install. Just one flag file and a hook.
 
 ## Limitations
 
-- Does not work for streaming responses — you can only capture after the AI's response is complete and visible.
-- One capture per unique content (dedup by hash). Re-copying the same text won't double-capture.
-- Linux Wayland support requires `wl-clipboard`. X11 needs `xclip` or `xsel`.
+- Only captures after the AI's response is fully visible and you copy it. Streaming responses can't be auto-captured.
+- One capture per unique content (dedup by hash).
+- Linux Wayland needs `wl-clipboard`. X11 needs `xclip` or `xsel`.

@@ -115,6 +115,15 @@ if [ -x "$VENV_PY" ] && [ -r "$AUTO_INIT_SCRIPT" ]; then
     "$VENV_PY" "$AUTO_INIT_SCRIPT" 2>/dev/null || true
 fi
 
+# Clipboard watcher auto-start (opt-in via ~/.tinm/clipboard_enabled flag).
+# Detached background daemon — survives this hook's exit. No-op if not
+# opted in or already running. Privacy: the trigger phrase requirement
+# means clipboard content is never captured without explicit user intent.
+CLIPBOARD_SCRIPT="$HOME/.claude/skills/tinm/tinm_clipboard.py"
+if [ -x "$VENV_PY" ] && [ -r "$CLIPBOARD_SCRIPT" ] && [ -f "$TINM_HOME/clipboard_enabled" ]; then
+    "$VENV_PY" "$CLIPBOARD_SCRIPT" --ensure-daemon 2>/dev/null || true
+fi
+
 # No current thread → nothing to inject, exit cleanly so Claude Code does
 # not show an error.
 [ -r "$CURRENT_FILE" ] || exit 0

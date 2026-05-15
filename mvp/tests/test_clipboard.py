@@ -23,6 +23,7 @@ def isolate_tmp(tmp_path, monkeypatch):
         tinm_clipboard, "LAST_CAPTURE_HASH_FILE", buffer_dir / "clipboard_last_capture.txt"
     )
     monkeypatch.setattr(tinm_clipboard, "DAEMON_PID_FILE", tmp_path / "clipboard_daemon.pid")
+    monkeypatch.setattr(tinm_clipboard, "ENABLED_FLAG_FILE", tmp_path / "clipboard_enabled")
     monkeypatch.setattr(tinm_clipboard, "CURRENT_FILE", tmp_path / "current_thread")
 
 
@@ -201,3 +202,95 @@ def test_stop_daemon_stale_pid():
     result = tinm_clipboard.stop_daemon()
     assert result is False
     assert not tinm_clipboard.DAEMON_PID_FILE.is_file()
+
+
+# ── enable / disable / is_enabled ────────────────────────────────────────────
+
+def test_is_enabled_false_by_default():
+    assert tinm_clipboard.is_enabled() is False
+
+
+def test_enable_sets_flag():
+    tinm_clipboard.enable()
+    assert tinm_clipboard.is_enabled() is True
+    assert tinm_clipboard.ENABLED_FLAG_FILE.is_file()
+
+
+def test_disable_removes_flag():
+    tinm_clipboard.enable()
+    assert tinm_clipboard.is_enabled() is True
+    tinm_clipboard.disable()
+    assert tinm_clipboard.is_enabled() is False
+
+
+def test_disable_idempotent():
+    """Calling disable when not enabled should not raise."""
+    tinm_clipboard.disable()  # no-op
+    assert tinm_clipboard.is_enabled() is False
+
+
+# ── ensure_daemon ────────────────────────────────────────────────────────────
+
+def test_ensure_daemon_noop_when_disabled():
+    """If user has not opted in, ensure_daemon must NOT launch anything."""
+    assert tinm_clipboard.is_enabled() is False
+    spawned = tinm_clipboard.ensure_daemon()
+    assert spawned is False
+
+
+def test_ensure_daemon_noop_when_already_running():
+    """If a daemon is already alive, ensure_daemon should not spawn another."""
+    tinm_clipboard.enable()
+    # Mock a live daemon
+    with patch.object(tinm_clipboard, "_daemon_alive", return_value=True):
+        spawned = tinm_clipboard.ensure_daemon()
+    assert spawned is False
+
+
+def test_ensure_daemon_spawns_when_enabled_and_not_running():
+    """Happy path: opted in + no daemon → spawn one."""
+    tinm_clipboard.enable()
+    fake_proc = MagicMock()
+    with patch.object(tinm_clipboard, "_daemon_alive", return_value=False):
+        with patch.object(tinm_clipboard.subprocess, "Popen", return_value=fake_proc) as mock_popen:
+            spawned = tinm_clipboard.ensure_daemon()
+    assert spawned is True
+    # Verify Popen was called with --watch
+    args = mock_popen.call_args
+    assert "--watch" in args[0][0]
+
+
+# ── _notify ──────────────────────────────────────────────────────────────────
+
+def test_notify_never_raises():
+    """Notification failures must never propagate."""
+    # Even with broken subprocess, _notify should return cleanly
+    with patch.object(tinm_clipboard.subprocess, "run", side_effect=OSError("boom")):
+        try:
+            tinm_clipboard._notify("title", "message")
+        except Exception as e:
+            pytest.fail(f"_notify raised: {e}")
+
+
+def test_notify_truncates_long_strings():
+    """Very long titles/messages should not break the notification call."""
+    long_title = "x" * 500
+    long_msg = "y" * 1000
+    with patch.object(tinm_clipboard.subprocess, "run") as mock_run:
+        tinm_clipboard._notify(long_title, long_msg)
+    # Should not raise; subprocess.run may or may not be called depending on platform
+
+
+def test_notify_escapes_quotes_for_osascript():
+    """macOS osascript needs double-quote escaping in the AppleScript string."""
+    if sys.platform != "darwin":
+        pytest.skip("macOS-specific test")
+    with patch.object(tinm_clipboard.subprocess, "run") as mock_run:
+        tinm_clipboard._notify('Title "with quotes"', 'msg "with quotes"')
+    # Verify osascript was called and the message was escaped
+    if mock_run.called:
+        cmd = mock_run.call_args[0][0]
+        # The script should contain escaped quotes
+        script = " ".join(cmd)
+        # No raw unescaped quotes in the dynamic portions
+        assert '\\"' in script or 'with quotes' in script

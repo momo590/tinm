@@ -54,7 +54,56 @@ from tinm_vendor_adapters import normalize_for
 TRIGGER_PHRASE = "# TINM SAVE"
 LAST_CAPTURE_HASH_FILE = BUFFER_DIR / "clipboard_last_capture.txt"
 DAEMON_PID_FILE = TINM_HOME / "clipboard_daemon.pid"
+ENABLED_FLAG_FILE = TINM_HOME / "clipboard_enabled"
 DEFAULT_INTERVAL = 3  # seconds
+
+
+def _notify(title: str, message: str) -> None:
+    """Best-effort native system notification. Never raises.
+
+    macOS: AppleScript via osascript. Linux: notify-send if installed.
+    Silent if neither is available (no-op).
+    """
+    try:
+        if sys.platform == "darwin":
+            # Escape double-quotes for AppleScript string literal
+            safe_title = title.replace('"', '\\"')[:80]
+            safe_msg = message.replace('"', '\\"')[:200]
+            subprocess.run(
+                [
+                    "osascript",
+                    "-e",
+                    f'display notification "{safe_msg}" with title "{safe_title}"',
+                ],
+                timeout=2,
+                capture_output=True,
+            )
+        elif sys.platform == "linux":
+            if shutil.which("notify-send"):
+                subprocess.run(
+                    ["notify-send", "-a", "TINM", title[:80], message[:200]],
+                    timeout=2,
+                    capture_output=True,
+                )
+    except Exception:
+        pass  # notifications must never break the capture flow
+
+
+def is_enabled() -> bool:
+    """True if the user has opted-in to clipboard watching."""
+    return ENABLED_FLAG_FILE.is_file()
+
+
+def enable() -> None:
+    """Opt-in: future Claude Code sessions will auto-start the daemon."""
+    TINM_HOME.mkdir(parents=True, exist_ok=True)
+    ENABLED_FLAG_FILE.touch()
+
+
+def disable() -> None:
+    """Opt-out: stop daemon (if running) and prevent future auto-starts."""
+    ENABLED_FLAG_FILE.unlink(missing_ok=True)
+    stop_daemon()
 
 
 def _detect_clipboard_cmd() -> Optional[list[str]]:
@@ -193,6 +242,15 @@ def capture_to_tinm(content: str) -> bool:
         return False
 
     _mark_captured(content)
+
+    # Visual feedback — native system notification (best-effort, never raises)
+    preview = content.replace("\n", " ").strip()
+    if len(preview) > 80:
+        preview = preview[:77] + "..."
+    _notify(
+        title=f"TINM captured to {thread_id}",
+        message=preview,
+    )
     return True
 
 
@@ -255,13 +313,64 @@ def daemon_status() -> str:
         return "stale pidfile (cleaned)"
 
 
+def _daemon_alive() -> bool:
+    """True if a clipboard daemon is currently running."""
+    if not DAEMON_PID_FILE.is_file():
+        return False
+    try:
+        pid = int(DAEMON_PID_FILE.read_text().strip())
+        os.kill(pid, 0)
+        return True
+    except (ValueError, ProcessLookupError, OSError):
+        DAEMON_PID_FILE.unlink(missing_ok=True)
+        return False
+
+
+def ensure_daemon(interval: int = DEFAULT_INTERVAL) -> bool:
+    """Launch the daemon as a detached background process if not already running.
+
+    Used by session_start.sh to auto-start without requiring the user to type
+    a command. Honors the ENABLED_FLAG_FILE opt-in gate: if the user has not
+    explicitly enabled clipboard watching, this is a no-op.
+
+    Returns True if a new daemon was spawned, False otherwise.
+    """
+    if not is_enabled():
+        return False
+    if _daemon_alive():
+        return False
+
+    script = Path(__file__).resolve()
+    venv_py = TINM_HOME / ".venv" / "bin" / "python"
+    py = str(venv_py) if venv_py.is_file() else sys.executable
+
+    try:
+        subprocess.Popen(
+            [py, str(script), "--watch", "--interval", str(interval)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,  # detach from parent so it survives session exit
+            close_fds=True,
+        )
+        return True
+    except Exception:
+        return False
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="TINM clipboard watcher")
     g = parser.add_mutually_exclusive_group(required=True)
     g.add_argument("--once", action="store_true", help="One-shot clipboard check")
     g.add_argument("--watch", action="store_true", help="Daemon mode (foreground)")
+    g.add_argument("--ensure-daemon", action="store_true",
+                   help="Launch daemon if enabled and not already running (used by SessionStart)")
     g.add_argument("--stop", action="store_true", help="Stop running daemon")
-    g.add_argument("--status", action="store_true", help="Show daemon status")
+    g.add_argument("--status", action="store_true", help="Show daemon + opt-in status")
+    g.add_argument("--enable", action="store_true",
+                   help="Opt-in: clipboard daemon auto-starts with future Claude Code sessions")
+    g.add_argument("--disable", action="store_true",
+                   help="Opt-out: stop daemon and prevent future auto-starts")
     parser.add_argument("--interval", type=int, default=DEFAULT_INTERVAL)
     args = parser.parse_args()
 
@@ -273,6 +382,12 @@ def main() -> int:
     if args.watch:
         watch(args.interval)
         return 0
+    if args.ensure_daemon:
+        spawned = ensure_daemon(args.interval)
+        if spawned:
+            print("clipboard daemon started")
+        # silent if already running or opt-in disabled (used by hooks)
+        return 0
     if args.stop:
         if stop_daemon():
             print("daemon stopped")
@@ -280,7 +395,27 @@ def main() -> int:
             print("no daemon was running")
         return 0
     if args.status:
-        print(daemon_status())
+        print(f"opt-in: {'enabled' if is_enabled() else 'disabled'}")
+        print(f"daemon: {daemon_status()}")
+        return 0
+    if args.enable:
+        enable()
+        spawned = ensure_daemon(args.interval)
+        msg = "clipboard watcher enabled"
+        if spawned:
+            msg += " (daemon started)"
+        else:
+            msg += " (daemon already running)" if _daemon_alive() else " (will start on next Claude Code session)"
+        print(msg)
+        print(f"\nTo capture: copy any text starting with '{TRIGGER_PHRASE}' on the first line.")
+        return 0
+    if args.disable:
+        was_running = _daemon_alive()
+        disable()
+        if was_running:
+            print("clipboard watcher disabled and daemon stopped")
+        else:
+            print("clipboard watcher disabled")
         return 0
     return 1
 
