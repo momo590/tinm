@@ -1,10 +1,11 @@
-"""TINM Cursor adapter — thin wrapper around tinm_vendor_adapters.
+"""TINM Cline adapter — normalizes Cline (VS Code extension) hook JSON.
 
-[BETA - schema unverified] Based on Cursor's documented beforeSubmitPrompt hook API.
-Run cursor_hook.sh --debug to verify the actual JSON schema received from Cursor.
+[BETA - schema unverified] Based on Cline's VS Code task notification
+structure. Run cline_hook.sh --debug to verify the actual JSON schema received
+from Cline.
 
-This module delegates to `tinm_vendor_adapters.normalize_for("cursor", ...)`.
-Field mappings live in that module's VENDORS["cursor"] entry.
+This module delegates to `tinm_vendor_adapters.normalize_for("cline", ...)`.
+Field mappings live in that module's VENDORS["cline"] entry.
 """
 from __future__ import annotations
 
@@ -16,8 +17,8 @@ from tinm_vendor_adapters import normalize_for
 
 
 def normalize(payload: dict) -> Optional[dict]:
-    """Normalize a Cursor hook payload to TINM's UserPromptSubmit schema."""
-    return normalize_for("cursor", payload)
+    """Normalize a Cline hook payload to TINM's UserPromptSubmit schema."""
+    return normalize_for("cline", payload)
 
 
 def main() -> int:
@@ -28,14 +29,14 @@ def main() -> int:
             return 0
         payload = json.loads(raw)
     except (json.JSONDecodeError, Exception) as e:
-        print(f"tinm_cursor: failed to parse input: {e}", file=sys.stderr)
+        print(f"tinm_cline: failed to parse input: {e}", file=sys.stderr)
         return 0  # non-blocking
 
     result = normalize(payload)
     if result is None:
         print(
-            "tinm_cursor: no recognizable prompt field in payload. "
-            "Run cursor_hook.sh --debug to inspect the JSON schema.",
+            "tinm_cline: no recognizable prompt field in payload. "
+            "Run cline_hook.sh --debug to inspect the JSON schema.",
             file=sys.stderr,
         )
         return 0
