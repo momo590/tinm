@@ -30,21 +30,21 @@ def isolate_tmp(tmp_path, monkeypatch):
 # ── extract_trigger_content ──────────────────────────────────────────────────
 
 def test_trigger_at_first_line():
-    clipboard = "# TINM SAVE\n\nThis is the content to save."
+    clipboard = "@tinm save\n\nThis is the content to save."
     result = tinm_clipboard.extract_trigger_content(clipboard)
     assert result == "This is the content to save."
 
 
 def test_trigger_with_leading_blank_lines():
-    clipboard = "\n\n# TINM SAVE\n\ncontent"
+    clipboard = "\n\n@tinm save\n\ncontent"
     result = tinm_clipboard.extract_trigger_content(clipboard)
     assert result == "content"
 
 
 def test_trigger_case_insensitive():
-    clipboard = "# tinm save\nlowercase trigger"
+    clipboard = "@TINM SAVE\nuppercase trigger variant"
     result = tinm_clipboard.extract_trigger_content(clipboard)
-    assert result == "lowercase trigger"
+    assert result == "uppercase trigger variant"
 
 
 def test_no_trigger_returns_none():
@@ -55,14 +55,14 @@ def test_no_trigger_returns_none():
 
 def test_trigger_in_middle_ignored():
     """Trigger in the middle of content is NOT a valid trigger — must be first line."""
-    clipboard = "First line\n# TINM SAVE\nSecond"
+    clipboard = "First line\n@tinm save\nSecond"
     result = tinm_clipboard.extract_trigger_content(clipboard)
     assert result is None
 
 
 def test_trigger_only_no_content():
     """Trigger phrase alone (no content after) returns None."""
-    clipboard = "# TINM SAVE\n\n"
+    clipboard = "@tinm save\n\n"
     result = tinm_clipboard.extract_trigger_content(clipboard)
     assert result is None
 
@@ -73,7 +73,7 @@ def test_empty_clipboard_returns_none():
 
 
 def test_multiline_content_preserved():
-    clipboard = "# TINM SAVE\n\nLine 1\nLine 2\nLine 3"
+    clipboard = "@tinm save\n\nLine 1\nLine 2\nLine 3"
     result = tinm_clipboard.extract_trigger_content(clipboard)
     assert result == "Line 1\nLine 2\nLine 3"
 
@@ -173,7 +173,7 @@ def test_check_once_no_trigger():
 def test_check_once_duplicate():
     """If content was already captured, check_once returns False."""
     tinm_clipboard._mark_captured("dup content")
-    clipboard = "# TINM SAVE\ndup content"
+    clipboard = "@tinm save\ndup content"
     with patch.object(tinm_clipboard, "read_clipboard", return_value=clipboard):
         result = tinm_clipboard.check_once()
     assert result is False

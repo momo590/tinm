@@ -81,7 +81,7 @@ VENDORS: dict[str, dict] = {
         "hook_type": "continue_dev",
     },
     "clipboard": {
-        # Clipboard capture — opt-in via "# TINM SAVE" trigger.
+        # Clipboard capture — opt-in via "@tinm save" trigger.
         # Not really a hook; the payload comes from tinm_clipboard.py.
         "prompt_fields": ["text"],
         "session_fields": ["session_id"],

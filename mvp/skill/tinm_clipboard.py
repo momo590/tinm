@@ -1,7 +1,7 @@
 """TINM clipboard watcher — opt-in cross-platform AI conversation capture.
 
 Polls the system clipboard. Activates ONLY when the clipboard content starts
-with the trigger phrase '# TINM SAVE' (case-insensitive, on its own line).
+with the trigger phrase '@tinm save' (case-insensitive, on its own line).
 The trigger line is stripped; the rest of the clipboard is captured into the
 current TINM thread.
 
@@ -51,7 +51,7 @@ from typing import Optional
 from tinm_paths import BUFFER_DIR, CURRENT_FILE, TINM_HOME
 from tinm_vendor_adapters import normalize_for
 
-TRIGGER_PHRASE = "# TINM SAVE"
+TRIGGER_PHRASE = "@tinm save"
 LAST_CAPTURE_HASH_FILE = BUFFER_DIR / "clipboard_last_capture.txt"
 DAEMON_PID_FILE = TINM_HOME / "clipboard_daemon.pid"
 ENABLED_FLAG_FILE = TINM_HOME / "clipboard_enabled"
@@ -144,7 +144,7 @@ def read_clipboard() -> Optional[str]:
 def extract_trigger_content(clipboard: str) -> Optional[str]:
     """Return the content AFTER the trigger phrase, or None if no trigger.
 
-    The trigger phrase '# TINM SAVE' must be on the FIRST non-empty line
+    The trigger phrase '@tinm save' must be on the FIRST non-empty line
     (case-insensitive). Everything after that line is the captured content.
     """
     if not clipboard:

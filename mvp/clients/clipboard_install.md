@@ -8,14 +8,14 @@
 ~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_clipboard.py --enable
 ```
 
-That's it. From now on, every time you open Claude Code, the watcher starts in the background. When you copy something starting with `# TINM SAVE`, you get a desktop notification and the content lands in your current TINM thread.
+That's it. From now on, every time you open Claude Code, the watcher starts in the background. When you copy something starting with `@tinm save`, you get a desktop notification and the content lands in your current TINM thread.
 
 ## How to capture
 
 1. In ChatGPT / Claude.ai / Perplexity / wherever, select the conversation text you want to save.
 2. Open a text editor (or just use the URL bar). Type:
    ```
-   # TINM SAVE
+   @tinm save
    <paste your conversation here>
    ```
 3. Select all (Cmd+A / Ctrl+A) and copy (Cmd+C / Ctrl+C).
@@ -23,7 +23,7 @@ That's it. From now on, every time you open Claude Code, the watcher starts in t
 
 ## Privacy
 
-- The watcher does **nothing** unless your clipboard's first non-empty line is exactly `# TINM SAVE` (case-insensitive).
+- The watcher does **nothing** unless your clipboard's first non-empty line is exactly `@tinm save` (case-insensitive).
 - The trigger line is stripped before storage — not stored.
 - Clipboard is read, never modified.
 - Duplicate captures (re-copying the same content) are silently skipped.
