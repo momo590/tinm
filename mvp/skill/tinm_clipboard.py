@@ -257,14 +257,22 @@ def capture_to_tinm(content: str) -> bool:
         )
         return False
 
+    # Fire-and-forget: user_prompt.sh runs the full TINM pipeline (embeddings,
+    # NPF scoring, journal write) which can take 5-30s on first call (model
+    # cold-start). The clipboard daemon must not block on this — we write
+    # the payload to stdin, close it, and let the subprocess complete in the
+    # background. The user gets the notification immediately; the thread
+    # update lands a few seconds later.
     try:
         proc = subprocess.Popen(
             ["bash", str(hook)],
             stdin=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            start_new_session=True,  # detach so it survives the daemon
         )
-        proc.communicate(input=json.dumps(normalized).encode(), timeout=5)
+        proc.stdin.write(json.dumps(normalized).encode())
+        proc.stdin.close()
     except Exception as e:
         print(f"tinm_clipboard: subprocess failed: {e}", file=sys.stderr)
         return False
