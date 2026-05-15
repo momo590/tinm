@@ -11,9 +11,10 @@
 set -e
 
 # TINM paths — honor TINM_HOME / TINM_PCP_DIR for Phase 2 multi-host
-# setups (Mac<->VPS via Syncthing-over-Tailscale). Defaults match the
-# Phase 1 single-host layout. current_thread + venv stay under TINM_HOME
-# (machine-local); the PCP store goes under TINM_PCP_DIR.
+# setups (e.g. Mac<->Linux via Syncthing-over-Tailscale, or any two
+# POSIX hosts sharing a remote). Defaults match the Phase 1 single-host
+# layout. current_thread + venv stay under TINM_HOME (machine-local);
+# the PCP store goes under TINM_PCP_DIR.
 TINM_HOME="${TINM_HOME:-$HOME/.tinm}"
 TINM_PCP_DIR="${TINM_PCP_DIR:-$TINM_HOME/pcp}"
 export TINM_HOME TINM_PCP_DIR
@@ -27,8 +28,8 @@ AUTO_INIT_SCRIPT="$HOME/.claude/skills/tinm/tinm_auto_init.py"
 # the latest snapshot from the remote so this host's session starts with the
 # freshest threads/artifacts the peer pushed.
 #
-# v0.2.2 fix: --autostash only stashes TRACKED modifications. When Mac and
-# VPS independently create the same file path, pulling fails with
+# v0.2.2 fix: --autostash only stashes TRACKED modifications. When two
+# hosts independently create the same file path, pulling fails with
 # "untracked working tree files would be overwritten by checkout" — the
 # error was being silenced by 2>/dev/null and the user saw stale state.
 # Switch to explicit stash --include-untracked, log everything to a per-host
@@ -130,9 +131,9 @@ THREAD_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
 "$VENV_PY" "$LOAD_SCRIPT" "$THREAD_ID" 2>/dev/null
 
 # Auto-journal: append a session_start entry to pcp/journal-<hostname>.jsonl.
-# Per-host file (not journal.jsonl) avoids the Mac↔VPS git race when both
-# ends append concurrently. Reads in tinm_journal.py glob journal-*.jsonl
-# to reconstruct the cross-host stream.
+# Per-host file (not journal.jsonl) avoids the cross-host git race when
+# both ends append concurrently. Reads in tinm_journal.py glob
+# journal-*.jsonl to reconstruct the cross-host stream.
 "$VENV_PY" - "$THREAD_ID" "$TINM_PCP_DIR" << 'PYEOF' 2>/dev/null || true
 import json, sys, datetime, pathlib, socket
 thread_id, pcp_dir = sys.argv[1], sys.argv[2]

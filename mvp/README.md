@@ -11,8 +11,8 @@ This is the **Phase 1** scope from the project charter: Claude Code
 only, no cross-vendor yet. Cross-vendor and an autonomous UI (Stipple)
 come in Phase 2-cross-vendor (see `notes/project_charter.md`).
 
-**Phase 2 cross-machine sync** (same vendor, multiple hosts — Mac↔VPS
-Hostinger over Syncthing-on-Tailscale) is supported as an opt-in
+**Phase 2 cross-machine sync** (same vendor, multiple hosts — e.g. a
+Mac laptop ↔ a Linux server over Syncthing-on-Tailscale) is supported as an opt-in
 layout: set `TINM_HOME` / `TINM_PCP_DIR` to split the synced PCP store
 from the machine-local venv + session marker. See
 [`../notes/phase2_vps_runbook.md`](../notes/phase2_vps_runbook.md) for

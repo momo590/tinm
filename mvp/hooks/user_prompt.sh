@@ -18,7 +18,7 @@ PROMPT_JSON="$(cat)"
 echo "[$(date -u +%FT%TZ)] hook fired" >> /tmp/tinm_hook.log
 
 # TINM paths — honor TINM_HOME / TINM_PCP_DIR for Phase 2 multi-host
-# setups (Mac<->VPS via Syncthing-over-Tailscale). Defaults match the
+# setups (e.g. Mac<->Linux via Syncthing-over-Tailscale). Defaults match the
 # Phase 1 single-host layout. current_thread + venv stay under TINM_HOME
 # (machine-local); the PCP store goes under TINM_PCP_DIR.
 TINM_HOME="${TINM_HOME:-$HOME/.tinm}"

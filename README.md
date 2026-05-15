@@ -43,7 +43,7 @@ Every new Claude Code session today starts with re-pasting yesterday's context: 
 - **PCP v0 storage.** Each thread is two JSON files (trajectory + named artifacts). The format is vendor-neutral so other clients can read the same threads. Spec: [`mvp/pcp_v0_spec.md`](mvp/pcp_v0_spec.md).
 - **Relevance.** When you send a new prompt, TINM ranks past artifacts against it and surfaces the matches into Claude's context — no manual `/load` required.
 
-An MCP server is also included so clients beyond Claude Code can read the same threads ([`mvp/clients/`](mvp/clients/)). Cross-host sync (Mac ↔ VPS) ships as a separate, optional setup script.
+An MCP server is also included so clients beyond Claude Code can read the same threads ([`mvp/clients/`](mvp/clients/)). Cross-host sync (e.g. Mac ↔ Linux) ships as a separate, optional setup script.
 
 ## Status
 

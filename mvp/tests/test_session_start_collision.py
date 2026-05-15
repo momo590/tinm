@@ -1,11 +1,14 @@
 """Canonical regression test for v0.2.2: SessionStart auto-pull must handle
 untracked-file collisions between hosts.
 
-Reproduces the bug observed 2026-05-14 on VPS: Mac committed a file at path X
-and pushed; VPS had X as untracked (independent creation); VPS session started;
-`git pull --rebase --autostash` failed silently with "untracked working tree
-files would be overwritten by checkout" because --autostash only stashes
-TRACKED modifications. The user saw stale state.
+Reproduces the bug observed 2026-05-14: host A committed a file at path X
+and pushed; host B had X as untracked (independent creation); host B's
+session started; `git pull --rebase --autostash` failed silently with
+"untracked working tree files would be overwritten by checkout" because
+--autostash only stashes TRACKED modifications. The user saw stale state.
+
+The two hosts in this test are generic — any pair of POSIX hosts running
+TINM (Mac+Linux, Linux+Linux, WSL+Linux, etc.) exhibit the same behavior.
 
 v0.2.2 fix: stash --include-untracked before pull. This test asserts the fix.
 """
@@ -80,8 +83,8 @@ class SessionStartCollisionTest(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="tinm-test-"))
         self.remote = self.tmp / "remote.git"
-        self.mac = self.tmp / "mac"
-        self.vps = self.tmp / "vps"
+        self.host_a = self.tmp / "host_a"
+        self.host_b = self.tmp / "host_b"
         self.sync_log = self.tmp / "sync-test.log"
 
         # Bare remote with main as default branch
@@ -95,44 +98,44 @@ class SessionStartCollisionTest(unittest.TestCase):
             cwd=self.tmp,
         )
 
-        # Mac clone with initial commit on main
+        # host_a clones and pushes initial commit on main
         git(
             "-c",
             "init.defaultBranch=main",
             "clone",
             "--quiet",
             str(self.remote),
-            str(self.mac),
+            str(self.host_a),
             cwd=self.tmp,
         )
-        (self.mac / "README.md").write_text("initial\n")
-        git("checkout", "-b", "main", cwd=self.mac, check=False)
-        git("add", "README.md", cwd=self.mac)
-        git("commit", "--quiet", "-m", "initial", cwd=self.mac)
-        git("push", "--quiet", "-u", "origin", "main", cwd=self.mac)
+        (self.host_a / "README.md").write_text("initial\n")
+        git("checkout", "-b", "main", cwd=self.host_a, check=False)
+        git("add", "README.md", cwd=self.host_a)
+        git("commit", "--quiet", "-m", "initial", cwd=self.host_a)
+        git("push", "--quiet", "-u", "origin", "main", cwd=self.host_a)
 
-        # VPS clone, in sync at this point
-        git("clone", "--quiet", str(self.remote), str(self.vps), cwd=self.tmp)
+        # host_b clones, in sync at this point
+        git("clone", "--quiet", str(self.remote), str(self.host_b), cwd=self.tmp)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_untracked_collision_does_not_block_pull(self):
-        """The canonical T26 regression: Mac pushes a path that VPS has as untracked.
-        Without v0.2.2 fix, pull fails silently. With the fix, pull succeeds and
-        VPS gets Mac's commit."""
-        # Mac creates and pushes a new file
-        (self.mac / "design.md").write_text("Mac version\n")
-        git("add", "design.md", cwd=self.mac)
-        git("commit", "--quiet", "-m", "add design from Mac", cwd=self.mac)
-        git("push", "--quiet", cwd=self.mac)
+        """The canonical T26 regression: host_a pushes a path that host_b has as
+        untracked. Without v0.2.2 fix, pull fails silently. With the fix, pull
+        succeeds and host_b gets host_a's commit."""
+        # host_a creates and pushes a new file
+        (self.host_a / "design.md").write_text("host_a version\n")
+        git("add", "design.md", cwd=self.host_a)
+        git("commit", "--quiet", "-m", "add design from host_a", cwd=self.host_a)
+        git("push", "--quiet", cwd=self.host_a)
 
-        # VPS independently creates the same path as untracked (NOT staged)
-        (self.vps / "design.md").write_text("VPS untracked version\n")
+        # host_b independently creates the same path as untracked (NOT staged)
+        (self.host_b / "design.md").write_text("host_b untracked version\n")
 
         # Sanity check: this is the exact failure mode without the fix
         legacy_pull = git(
-            "pull", "--rebase", "--autostash", "--quiet", cwd=self.vps, check=False
+            "pull", "--rebase", "--autostash", "--quiet", cwd=self.host_b, check=False
         )
         self.assertNotEqual(
             legacy_pull.returncode,
@@ -141,70 +144,70 @@ class SessionStartCollisionTest(unittest.TestCase):
         )
 
         # Run the v0.2.2 fix
-        result = hook_sync_block(self.vps, self.sync_log)
+        result = hook_sync_block(self.host_b, self.sync_log)
 
         # Assertions
         self.assertTrue(result["pull_ok"], "Pull must succeed after v0.2.2 fix")
         self.assertTrue(result["stashed"], "Stash must have been created (dirty repo)")
 
-        log = git("log", "--oneline", cwd=self.vps).stdout
+        log = git("log", "--oneline", cwd=self.host_b).stdout
         self.assertIn(
-            "add design from Mac",
+            "add design from host_a",
             log,
-            "VPS must have Mac's commit after sync",
+            "host_b must have host_a's commit after sync",
         )
 
     def test_tracked_modifications_preserved(self):
         """Sanity: tracked modifications should round-trip through stash/pop."""
         # Add and commit a file on both sides via remote sync
-        (self.mac / "shared.md").write_text("v1\n")
-        git("add", "shared.md", cwd=self.mac)
-        git("commit", "--quiet", "-m", "add shared.md", cwd=self.mac)
-        git("push", "--quiet", cwd=self.mac)
-        git("pull", "--quiet", cwd=self.vps)
+        (self.host_a / "shared.md").write_text("v1\n")
+        git("add", "shared.md", cwd=self.host_a)
+        git("commit", "--quiet", "-m", "add shared.md", cwd=self.host_a)
+        git("push", "--quiet", cwd=self.host_a)
+        git("pull", "--quiet", cwd=self.host_b)
 
-        # VPS modifies the tracked file
-        (self.vps / "shared.md").write_text("v1\nVPS edit\n")
+        # host_b modifies the tracked file
+        (self.host_b / "shared.md").write_text("v1\nhost_b edit\n")
 
-        # Mac independently adds a new file and pushes
-        (self.mac / "other.md").write_text("other\n")
-        git("add", "other.md", cwd=self.mac)
-        git("commit", "--quiet", "-m", "add other.md", cwd=self.mac)
-        git("push", "--quiet", cwd=self.mac)
+        # host_a independently adds a new file and pushes
+        (self.host_a / "other.md").write_text("other\n")
+        git("add", "other.md", cwd=self.host_a)
+        git("commit", "--quiet", "-m", "add other.md", cwd=self.host_a)
+        git("push", "--quiet", cwd=self.host_a)
 
         # Run sync
-        result = hook_sync_block(self.vps, self.sync_log)
+        result = hook_sync_block(self.host_b, self.sync_log)
 
         self.assertTrue(result["pull_ok"])
         self.assertTrue(result["stashed"])
         # Tracked modification should be restored after pop
         self.assertEqual(
-            (self.vps / "shared.md").read_text(),
-            "v1\nVPS edit\n",
-            "VPS's tracked modification must survive sync",
+            (self.host_b / "shared.md").read_text(),
+            "v1\nhost_b edit\n",
+            "host_b's tracked modification must survive sync",
         )
-        # Mac's new file should be present
-        self.assertTrue((self.vps / "other.md").exists())
+        # host_a's new file should be present
+        self.assertTrue((self.host_b / "other.md").exists())
 
     def test_clean_repo_no_op_pull(self):
-        """When VPS has no local changes, sync is a clean pull with no stash."""
-        # Mac pushes a new commit
-        (self.mac / "fresh.md").write_text("fresh\n")
-        git("add", "fresh.md", cwd=self.mac)
-        git("commit", "--quiet", "-m", "fresh commit", cwd=self.mac)
-        git("push", "--quiet", cwd=self.mac)
+        """When host_b has no local changes, sync is a clean pull with no stash."""
+        # host_a pushes a new commit
+        (self.host_a / "fresh.md").write_text("fresh\n")
+        git("add", "fresh.md", cwd=self.host_a)
+        git("commit", "--quiet", "-m", "fresh commit", cwd=self.host_a)
+        git("push", "--quiet", cwd=self.host_a)
 
-        # VPS is clean
+        # host_b is clean
         self.assertEqual(
-            git("status", "--porcelain", cwd=self.vps).stdout.strip(),
+            git("status", "--porcelain", cwd=self.host_b).stdout.strip(),
             "",
         )
 
-        result = hook_sync_block(self.vps, self.sync_log)
+        result = hook_sync_block(self.host_b, self.sync_log)
 
         self.assertTrue(result["pull_ok"])
         self.assertFalse(result["stashed"], "No stash should be created on clean repo")
-        self.assertTrue((self.vps / "fresh.md").exists())
+        self.assertTrue((self.host_b / "fresh.md").exists())
 
     def test_hook_block_matches_implementation(self):
         """Drift detection: the test's hook_sync_block must match what the real
