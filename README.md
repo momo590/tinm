@@ -1,6 +1,8 @@
-# TINM — cross-session memory for Claude Code
+# TINM — Claude Code remembers between sessions. Finally.
 
-> Stop re-pasting yesterday's context at the start of every new session.
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue)
+![Status](https://img.shields.io/badge/status-beta-orange)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/momo590/tinm/main/mvp/scripts/install.sh | bash
@@ -29,27 +31,21 @@ Source: benchmark/runs/pilot_wiki2hop_results.json
 
 </details>
 
-Reproducible after `bash install.sh` + `tinm_demo.py` (see [Try it](#try-it)). The cast source is at [`docs/assets/replay.cast`](docs/assets/replay.cast).
-
 macOS / Linux, ~3 minutes (most of it is `pip install`), fully reversible. The walkthrough is in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
-## What it removes
+---
 
-Every new Claude Code session today starts with re-pasting yesterday's context: scrolling Slack, your last terminal, your own notes, then copy-pasting key decisions before any work begins. TINM does that step for you. It also avoids the alternative of growing `CLAUDE.md` until it becomes noise.
+## The problem
 
-## How it works
+Every new Claude Code session today starts the same way: you scroll Slack, your last terminal, your own notes — then copy-paste yesterday's key decisions before any work begins. Or you grow `CLAUDE.md` until it becomes noise. Either way, the context Claude needs is somewhere — just not where Claude can see it.
 
-- **Hooks.** Three Claude Code hooks read and write a local store under `~/.tinm/`. Nothing else in your setup changes.
-- **PCP v0 storage.** Each thread is two JSON files (trajectory + named artifacts). The format is vendor-neutral so other clients can read the same threads. Spec: [`mvp/pcp_v0_spec.md`](mvp/pcp_v0_spec.md).
-- **Relevance.** When you send a new prompt, TINM ranks past artifacts against it and surfaces the matches into Claude's context — no manual `/load` required.
+## The solution
 
-An MCP server is also included so clients beyond Claude Code can read the same threads ([`mvp/clients/`](mvp/clients/)). Cross-host sync (e.g. Mac ↔ Linux) ships as a separate, optional setup script.
+- **Auto-recall.** Past decisions, designs, and answers surface into your next session automatically — no `/load`, no file paste.
+- **Works with what you already use.** Three small hooks plug into Claude Code. Nothing else in your setup changes.
+- **Not locked to one client.** Memory is stored in an open format (PCP) — a simple JSON layout any AI client can read. Your context belongs to you, not to a vendor.
 
-## Status
-
-- **v0.1** — cross-session memory shipped and stable. First external beta tester onboarding now.
-- **v0.2** — intra-session digest (in flight). See the design doc in `paper/` for the mechanism.
-- **v1.0** — openClaw / Cursor / Claude Desktop client parity.
+> **What's PCP?** Personal Context Protocol. A vendor-neutral way to store AI conversation memory on disk. Other clients (Cursor, OpenClaw, Aider, …) can read the same memory through bundled adapters.
 
 ## Try it
 
@@ -66,25 +62,46 @@ The install ships a short demo thread so you can see cross-session recall on bun
 #    "What was the biggest absolute effect we measured on the 2WikiMultihopQA pilot?"
 ```
 
-Claude will answer with a specific number from the demo's stored artifacts — one it could not have produced without TINM pulling that artifact into its context. That's the mechanism: prior-session content surfaced into a fresh session, no manual load, no file read.
+Claude will answer with a specific number from the demo's stored memory — one it could not have produced without TINM pulling that memory into its context. That's the mechanism: prior-session content surfaced into a fresh session, no manual load, no file read.
 
 When you're ready to use TINM on your own work:
 
 ```
-/tinm init my-project          # create your first real thread
-/tinm save "the architecture decision"   # mark a named artifact for cross-session recall
+/tinm init my-project                    # create your first real thread
+/tinm save "the architecture decision"   # mark a key decision for future sessions
 ```
 
-Next session, ask anything that touches that decision — TINM pulls the artifact back without you re-pasting.
+Next session, ask anything that touches that decision — TINM brings it back without you re-pasting.
+
+## How it works
+
+- **Three hooks.** Claude Code fires `SessionStart`, `UserPromptSubmit`, and `Stop` events as you work. TINM listens to all three.
+- **At session start**, TINM loads your most relevant past notes into Claude's context. Recent decisions, named files, answers you approved — they're back.
+- **On every prompt**, TINM scores your message against everything it remembers and surfaces the matches into context, automatically.
+- **At session end**, TINM captures the answers you implicitly approved (by moving on without correction) — so next session knows what you agreed on, not just what you asked.
+- **Storage.** Everything lives in `~/.tinm/` as plain JSON files. Open them in any text editor. Nothing leaves your machine.
+
+## Research
+
+TINM-lite (the algorithm behind the product) reaches **+0.114 F1** over a strong RAG baseline on the 2WikiMultihopQA benchmark (n=50, paired t=4.03). Pareto-best on 4 of 5 long-context benchmarks. Full evaluation in [`paper/`](paper/); the MVP applies the same mechanism to your Claude Code sessions.
 
 ## Privacy
 
-Everything is local in `~/.tinm/` by default. Nothing leaves your machine unless you explicitly enable telemetry sharing (`python ~/.claude/skills/tinm/tinm_telemetry.py on --share`) — and even then only **aggregate counts**, never prompts or file contents. The privacy contract is enforced and tested in [`mvp/tests/test_telemetry.py`](mvp/tests/test_telemetry.py). Opt out anytime:
+Everything is local in `~/.tinm/` by default. Nothing leaves your machine unless you explicitly enable telemetry sharing — and even then only **aggregate counts**, never prompts or file contents. The privacy contract is enforced and tested in [`mvp/tests/test_telemetry.py`](mvp/tests/test_telemetry.py).
 
 ```bash
-python ~/.claude/skills/tinm/tinm_telemetry.py off
 python ~/.claude/skills/tinm/tinm_telemetry.py status   # check current state
+python ~/.claude/skills/tinm/tinm_telemetry.py off      # opt out anytime
 ```
+
+## Other clients (beyond Claude Code)
+
+Adapters ship for Cursor, OpenClaw, Windsurf, Cline, Aider, Codex CLI, and Continue.dev (all [BETA]). A universal clipboard watcher captures conversations from ChatGPT web, Claude.ai, Perplexity, and any other browser-based AI tool via an opt-in trigger phrase. See [`mvp/clients/`](mvp/clients/) for install guides.
+
+## Status
+
+- **v0.2.2** — cross-session memory, intra-session relevance scoring, 8 vendor adapters. Stable on macOS and Linux.
+- **Next** — handoff-prompt generator (compose the perfect prompt for the next agent/machine), telemetry-tuned scoring weights.
 
 ## Uninstall (fully reversible)
 
@@ -99,14 +116,10 @@ Leaves a `~/.claude/settings.json.pre-uninstall` backup so you can roll back man
 - [`mvp/`](mvp/) — the Claude Code MVP (skills, hooks, scripts, tests). The thing you install.
   - [`mvp/pcp_v0_spec.md`](mvp/pcp_v0_spec.md) — the open standard. Start here if you only read one file.
   - [`mvp/seeds/`](mvp/seeds/) — bundled demo threads, including `tinm-tour`.
-  - [`mvp/clients/`](mvp/clients/) — MCP server and non-Claude-Code adapters.
+  - [`mvp/clients/`](mvp/clients/) — MCP server and non-Claude-Code adapters (Cursor, OpenClaw, Windsurf, Cline, Aider, Codex, Continue.dev, clipboard).
 - [`paper/`](paper/) — paper draft + figures ([Fig 1 Pareto plot](paper/figures/fig1_pareto.pdf)).
 - [`benchmark/`](benchmark/) — 5 long-context benchmarks comparing TINM-lite vs RAG baselines.
 - [`notes/`](notes/) — internal ADRs and design docs (kept public for transparency).
-
-## Research
-
-TINM-lite (the paper substrate) reaches **+0.114 F1** over a strong RAG baseline on 2WikiMultihopQA n=50 by carrying an EMA-anchor + trajectory across turns (paired t=4.03). Pareto-best on 4 of 5 long-context benchmarks. Full evaluation in `paper/`; the MVP applies the same mechanism to Claude Code sessions.
 
 ## License
 
@@ -115,3 +128,7 @@ MIT — see [LICENSE](LICENSE).
 ## Contributing / feedback
 
 If you try it, **DM [@MmakhtarDiop](https://x.com/MmakhtarDiop) on X** what you noticed — magical, weird, boring, or broken. That is the data this stage needs more than any commit.
+
+---
+
+⭐ **Star if it saves you time — it helps others find it.**
