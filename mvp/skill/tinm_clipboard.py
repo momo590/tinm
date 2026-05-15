@@ -203,6 +203,28 @@ def _current_thread() -> Optional[str]:
         return None
 
 
+def _resolve_hook_path() -> Path:
+    """Locate user_prompt.sh in the TINM source tree.
+
+    Looks first relative to this file (mvp/skill -> mvp/hooks), then falls
+    back to $TINM_HOME/source/mvp/hooks for the installed layout where the
+    skill is shipped to ~/.claude/skills/tinm/ (no sibling hooks/).
+    """
+    here = Path(__file__).resolve().parent
+    candidates = [
+        here.parent / "hooks" / "user_prompt.sh",
+        Path(os.environ.get("TINM_HOME", str(Path.home() / ".tinm")))
+        / "source"
+        / "mvp"
+        / "hooks"
+        / "user_prompt.sh",
+    ]
+    for c in candidates:
+        if c.is_file():
+            return c
+    return candidates[0]  # deterministic fallback even if missing
+
+
 def capture_to_tinm(content: str) -> bool:
     """Send captured content to the TINM pipeline as a clipboard event.
 
@@ -226,8 +248,13 @@ def capture_to_tinm(content: str) -> bool:
         return False
 
     # Pipe normalized JSON to user_prompt.sh — same pipeline as Cursor/etc.
-    hook = Path(__file__).resolve().parent.parent / "hooks" / "user_prompt.sh"
+    hook = _resolve_hook_path()
     if not hook.is_file():
+        print(
+            f"tinm_clipboard: user_prompt.sh not found at {hook}. "
+            "Check TINM install layout.",
+            file=sys.stderr,
+        )
         return False
 
     try:
@@ -238,7 +265,8 @@ def capture_to_tinm(content: str) -> bool:
             stderr=subprocess.DEVNULL,
         )
         proc.communicate(input=json.dumps(normalized).encode(), timeout=5)
-    except Exception:
+    except Exception as e:
+        print(f"tinm_clipboard: subprocess failed: {e}", file=sys.stderr)
         return False
 
     _mark_captured(content)
