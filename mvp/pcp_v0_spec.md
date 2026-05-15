@@ -224,3 +224,106 @@ implementation. It exercises:
 
 A second-client validation (e.g., a Claude.ai MCP server that reads
 the same files) is the v0.1 acceptance test.
+
+---
+
+## 7. PCP as Hook Interop Standard
+
+### 7.1 PCP beyond TINM-internal storage
+
+PCP v0 was designed as TINM's persistence format, but its thread/artifact
+schema is intentionally runtime-agnostic. This section formalises a
+consequence of that design: **PCP v0 is also a vendor-neutral hook interop
+protocol**.
+
+Every AI coding assistant (Claude Code, Cursor, OpenClaw, …) exposes a
+lifecycle-hook mechanism. The hooks differ in name, JSON schema, and
+invocation convention — but they all carry the same semantic events:
+a user submits a prompt, the agent responds, a tool is called. PCP's
+`trajectory` entries are the canonical normalised form of those events.
+An "adapter" is a thin shell/Python shim that receives a runtime's native
+hook payload and emits a PCP-normalised event into the TINM pipeline.
+
+The result: TINM captures state using the same PCP format regardless of
+which runtime the user is working in. A thread started in Claude Code can
+be resumed in Cursor or OpenClaw without any schema translation at read
+time — because the write-time adapter already normalised the data.
+
+### 7.2 Standard event vocabulary
+
+The table below maps each runtime's native hook name to its PCP-normalised
+event tag (stored as `hook_type` in trajectory entries and adapter outputs):
+
+| Runtime | Native hook name | PCP event tag |
+|---|---|---|
+| Claude Code | `UserPromptSubmit` | `prompt.submit` |
+| Claude Code | `Stop` | `agent.response` |
+| Claude Code | `PreToolUse` | `tool.before_call` |
+| Claude Code | `PostToolUse` | `tool.after_call` |
+| Claude Code | `SessionStart` | `session.start` |
+| Cursor | `beforeSubmitPrompt` | `prompt.submit` |
+| Cursor | `afterAgentResponse` | `agent.response` |
+| OpenClaw | incoming message | `prompt.submit` |
+
+Rules:
+- A PCP event tag of the form `<noun>.<verb>` is stable across MAJOR versions
+  as long as its semantic meaning does not change.
+- An adapter that emits an unrecognised event tag MUST prefix it with the
+  runtime name (e.g. `cursor.customEvent`) to avoid collisions.
+- The `trajectory` entry's `client` field records the runtime name;
+  `hook_type` records the PCP event tag. Both are required when written
+  by an adapter.
+
+### 7.3 How adapters work
+
+Each runtime has a thin two-layer adapter:
+
+```
+[runtime hook] → [shell adapter] → [Python normaliser] → [TINM pipeline]
+```
+
+1. **Shell adapter** (e.g. `cursor_hook.sh`): receives the runtime's raw
+   invocation (stdin JSON or CLI args), optionally logs it in debug mode,
+   locates the TINM venv and Python normaliser, and pipes the payload
+   through.
+
+2. **Python normaliser** (e.g. `tinm_cursor.py`): parses the runtime-
+   specific JSON, extracts the canonical fields (`prompt`, `session_id`,
+   `transcript_path`), and emits a JSON dict that the existing
+   `user_prompt.sh` pipeline can consume without modification.
+
+3. **TINM pipeline** (`user_prompt.sh`, `tinm_conv_add.py`, …): unchanged.
+   It receives a normalised payload and appends a trajectory entry with
+   `client = <runtime>` and the appropriate PCP event tag.
+
+Key properties:
+- **Non-blocking**: every adapter exits `0` on any error, so a TINM failure
+  never interrupts the user's native workflow.
+- **Idempotent reads**: the PCP files written by an adapter are byte-for-byte
+  compatible with those written by the Claude Code hooks — same schema,
+  same field names.
+- **Composable**: a user can run Claude Code and Cursor against the same
+  `~/.tinm/threads/<thread_id>.json` file; both adapters append to the same
+  trajectory, and `client_history` in `metadata` records which runtimes
+  have contributed.
+
+### 7.4 Future: OpenClaw plugin manifest format
+
+OpenClaw exposes an incoming-message hook as part of its plugin manifest.
+A future `openclaw_hook.sh` + `tinm_openclaw.py` adapter will follow the
+same two-layer pattern. The PCP event tag for OpenClaw incoming messages
+is pre-assigned as `prompt.submit` (see table above), so the trajectory
+format requires no changes.
+
+The OpenClaw plugin manifest will declare:
+```json
+{
+  "tinm_pcp_version": "0.1",
+  "hook": "incoming_message",
+  "adapter": "~/.tinm/source/mvp/hooks/openclaw_hook.sh"
+}
+```
+
+This manifest format is a v0.2 design target; v0.1 OpenClaw integration
+uses manual invocation of `openclaw_hook.sh` (identical to the Cursor
+pattern).

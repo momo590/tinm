@@ -40,14 +40,16 @@ THREAD_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
 [ -x "$VENV_PY" ] || exit 0
 [ -r "$UPDATE_SCRIPT" ] || exit 0
 
-# Extract the prompt text from the already-captured JSON.
+# Extract prompt text, transcript path, and session ID from the captured JSON.
+# All three are needed early — transcript path and session ID before the F1
+# upgrade check, prompt text before everything else.
 PROMPT_TEXT="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
     'import json, sys; print(json.load(sys.stdin).get("prompt", ""), end="")' \
     2>/dev/null)"
 [ -n "$PROMPT_TEXT" ] || exit 0
 
 # Heuristic log for native-compaction detection fallback. Consumed by
-# digest_generator._heuristic_compaction_from_log() when the PreCompact
+# tinm_compaction_detect.heuristic_compaction_fired() when the PreCompact
 # marker is absent (e.g., hook not yet installed on peer host, or
 # pre-marker session). Cheap: one wc -l + one printf >> file.
 TRANSCRIPT_PATH="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
@@ -56,24 +58,142 @@ TRANSCRIPT_PATH="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
 SESSION_ID="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
     'import json, sys; print(json.load(sys.stdin).get("session_id", ""), end="")' \
     2>/dev/null)"
+
+# Compute transcript line count once — reused by F1, F3, and F7.
+_TRANSCRIPT_LINES=0
+if [ -r "$TRANSCRIPT_PATH" ]; then
+    _TRANSCRIPT_LINES="$(wc -l < "$TRANSCRIPT_PATH" 2>/dev/null | tr -d ' ' || echo 0)"
+fi
+
 if [ -n "$TRANSCRIPT_PATH" ] && [ -r "$TRANSCRIPT_PATH" ] && [ -n "$SESSION_ID" ]; then
-    N_MSG="$(wc -l < "$TRANSCRIPT_PATH" 2>/dev/null | tr -d ' ')"
-    [ -n "$N_MSG" ] && printf '{"ts":"%s","session_id":"%s","n_messages":%s}\n' \
-        "$(date -u +%FT%TZ)" "$SESSION_ID" "$N_MSG" \
+    [ -n "$_TRANSCRIPT_LINES" ] && printf '{"ts":"%s","session_id":"%s","n_messages":%s}\n' \
+        "$(date -u +%FT%TZ)" "$SESSION_ID" "$_TRANSCRIPT_LINES" \
         >> "$TINM_PCP_DIR/transcript_size.jsonl" 2>/dev/null || true
 fi
 
-# Run the update. stdout flows through to Claude's context (trajectory
-# hint). stderr is suppressed. The || true ensures hook exit code is 0.
-# --telemetry wraps the call in measure_latency() (Lane H) — no-op
-# if the user has opted out of telemetry.
-"$VENV_PY" "$UPDATE_SCRIPT" "$THREAD_ID" \
-    --query "$PROMPT_TEXT" \
-    --role user \
-    --client claude-code \
-    --emit-hint \
-    --telemetry user_prompt_submit \
-    2>/dev/null || true
+# ── F4: Conv index — populate intra-session rolling index ────────────────────
+# Reads text from stdin via tinm_conv_add.py to avoid all shell quoting hazards
+# around arbitrary user prompt content. Best-effort: || true ensures the hook
+# never fails due to a conv_index error. TURN_N is the number of transcript
+# lines at this point, used as a monotonically increasing turn counter.
+CONV_ADD_SCRIPT="$HOME/.claude/skills/tinm/tinm_conv_add.py"
+if [ -n "$SESSION_ID" ] && [ -n "$PROMPT_TEXT" ] && [ -x "$VENV_PY" ] && [ -r "$CONV_ADD_SCRIPT" ]; then
+    printf '%s' "$PROMPT_TEXT" | \
+        "$VENV_PY" "$CONV_ADD_SCRIPT" "$SESSION_ID" "$_TRANSCRIPT_LINES" "user" \
+        2>>/tmp/tinm_hook.log || true
+fi
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── F1: Upgrade trigger ──────────────────────────────────────────────────────
+# If the first 20 characters of the prompt (stripped, lowercased) start with
+# "upgrade" AND this is the first user turn (transcript has < 4 lines), launch
+# tinm_upgrade.py in the background and emit an acknowledgement to stdout so
+# Claude surfaces it. This is checked BEFORE the L1 threshold to ensure it is
+# never suppressed by the skip-find gate.
+UPGRADE_SCRIPT="$HOME/.claude/skills/tinm/tinm_upgrade.py"
+_FIRST20="$(printf '%s' "$PROMPT_TEXT" | tr '[:upper:]' '[:lower:]' | cut -c1-20 | tr -d ' \t\n')"
+if printf '%s' "$_FIRST20" | grep -q '^upgrade' && [ "$_TRANSCRIPT_LINES" -lt 4 ]; then
+    if [ -r "$UPGRADE_SCRIPT" ] && [ -x "$VENV_PY" ]; then
+        "$VENV_PY" "$UPGRADE_SCRIPT" \
+            >/tmp/tinm_upgrade_out.log 2>&1 &
+        echo "[TINM] Upgrade triggered — running in background. You will see the result shortly."
+    fi
+fi
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── F3: L1 activation threshold ─────────────────────────────────────────────
+# Skip expensive hint-emission on very short sessions unless anaphora is
+# detected. Saves ~150ms on turns 1-2.
+# _TRANSCRIPT_LINES was computed above; alias for clarity.
+_TURN_COUNT="${_TRANSCRIPT_LINES:-0}"
+
+# Anaphora detection (FR + EN) — must match the logic in tinm_update.py
+# _ANAPHORIC_TOKEN_RE so results are consistent.
+_ANAPHORA_PATTERN='(avant|earlier|before|comme|précédemment|previously|turn|tour|step|étape|like we|what we|ce qu|qu'"'"'on)'
+_HAS_ANAPHORA=0
+if printf '%s' "$PROMPT_TEXT" | grep -iqE "$_ANAPHORA_PATTERN" 2>/dev/null; then
+    _HAS_ANAPHORA=1
+fi
+
+_SKIP_FIND=0
+if [ "$_TURN_COUNT" -lt 6 ] && [ "$_HAS_ANAPHORA" -eq 0 ]; then
+    _SKIP_FIND=1
+fi
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── F7: Digest injection + async trigger ────────────────────────────────────
+DIGEST_SCRIPT="$HOME/.claude/skills/tinm/tinm_digest.py"
+COMPACTION_SCRIPT="$HOME/.claude/skills/tinm/tinm_compaction_detect.py"
+
+if [ -r "$DIGEST_SCRIPT" ] && [ -x "$VENV_PY" ] && [ -n "$SESSION_ID" ]; then
+    # Build a small inline Python runner for both compaction detect + digest ops.
+    _DIGEST_OUT="$(SKILL_DIR="$HOME/.claude/skills/tinm" \
+        "$VENV_PY" - "$SESSION_ID" "$THREAD_ID" "$TRANSCRIPT_PATH" "$_TURN_COUNT" \
+        2>>/tmp/tinm_hook.log << 'PYEOF'
+import sys, os
+from pathlib import Path
+sys.path.insert(0, os.environ.get('SKILL_DIR', ''))
+
+session_id    = sys.argv[1]
+thread_id     = sys.argv[2]
+transcript_path = sys.argv[3]
+try:
+    turn_count = int(sys.argv[4])
+except (IndexError, ValueError):
+    turn_count = 0
+
+from tinm_digest import get_pending_digest, should_trigger_digest, launch_digest_async
+from tinm_compaction_detect import compaction_active
+
+# Count lines in transcript (may differ from hook's value if compaction fired)
+n_lines = 0
+if transcript_path:
+    try:
+        n_lines = sum(1 for _ in open(transcript_path) if _.strip())
+    except Exception:
+        pass
+
+# Check for a pending digest from a previous background run.
+pending = get_pending_digest(session_id, turn_count)
+if pending:
+    print(f"[TINM digest]\n{pending}")
+
+# Conditionally launch a new digest if session is long enough and not compacted.
+is_compacted = compaction_active(session_id, n_lines)
+if not is_compacted and should_trigger_digest(transcript_path, session_id):
+    launch_digest_async(session_id, thread_id, transcript_path, turn_count)
+PYEOF
+    2>/dev/null)" || true
+
+    # Emit pending digest to stdout (Claude's context) if one was ready.
+    if [ -n "$_DIGEST_OUT" ]; then
+        printf '%s\n' "$_DIGEST_OUT"
+    fi
+fi
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Run the trajectory update.
+# - Always record trajectory (omit --emit-hint when _SKIP_FIND=1).
+# - Only emit hint when _SKIP_FIND=0 (turn >= 6 or anaphora detected).
+# --telemetry wraps the call in measure_latency() (Lane H) — no-op if opted out.
+if [ "$_SKIP_FIND" -eq 0 ]; then
+    # Full path: record + emit hint
+    "$VENV_PY" "$UPDATE_SCRIPT" "$THREAD_ID" \
+        --query "$PROMPT_TEXT" \
+        --role user \
+        --client claude-code \
+        --emit-hint \
+        --telemetry user_prompt_submit \
+        2>/dev/null || true
+else
+    # Short session, no anaphora: record trajectory but suppress hint output
+    "$VENV_PY" "$UPDATE_SCRIPT" "$THREAD_ID" \
+        --query "$PROMPT_TEXT" \
+        --role user \
+        --client claude-code \
+        --telemetry user_prompt_submit \
+        2>/dev/null || true
+fi
 
 # v0.2.1 — assistant capture pipeline. Score the buffered assistant turn
 # against this user prompt, register approved/rejected/neutral. Never

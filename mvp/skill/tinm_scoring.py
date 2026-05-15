@@ -118,34 +118,65 @@ def score_artifact(artifact: dict, query: str) -> tuple[float, str]:
     return (_cosine(_encode(query), emb), "embedding")
 
 
-def rank_artifacts(artifacts: list[dict], query: str, k: int = 3) -> list[dict]:
+def rank_artifacts(
+    artifacts: list[dict],
+    query: str,
+    k: int = 3,
+    # NPF kwargs — passed through when caller has the context to supply them
+    anchor_vec: "list[float] | None" = None,
+    rejected_log: "list[dict] | None" = None,
+    thread_id: "str | None" = None,
+    n_sr_cooccurrences: int = 0,
+) -> list[dict]:
     """Return the top-K artifacts for ``query``, using two-stage scoring.
 
     Stage 1 (substring, cheap): score each artifact by substring match on
     ``name`` and any aliases. If any artifact scores > 0, return only
     substring hits, sorted by score descending, truncated to ``k``.
 
-    Stage 2 (embedding fallback): if no substring hits, compute a query
-    embedding once, then rank by cosine similarity against each
-    artifact's stored embedding. Artifacts without an embedding are
-    skipped.
+    Stage 2a (NPF): if ``anchor_vec``, ``rejected_log``, and ``thread_id`` are
+    provided, use the 4-head Neural Potential Field scorer (tinm_npf.py).
+    NPF is a superset of cosine: it adds recency, SR-derived current, and
+    rejection-demotion on top of the magnetic (anchor-cosine) head.
+
+    Stage 2b (embedding fallback): if NPF is unavailable or any required arg
+    is missing, fall back to pure cosine similarity — identical to pre-v0.2.2
+    behaviour.
 
     Each returned dict has the artifact's fields plus ``score: float`` and
-    ``match_kind: "substring" | "embedding"``.
+    ``match_kind: "substring" | "embedding" | "npf"``.
     """
     if not artifacts:
         return []
 
+    # Stage 1: substring
     substring_hits: list[tuple[float, dict]] = []
     for a in artifacts:
         candidates = [a["name"]] + list(a.get("aliases") or [])
-        score = _substring_score(query, candidates)
-        if score > 0:
-            substring_hits.append((score, a))
+        sub = _substring_score(query, candidates)
+        if sub > 0:
+            substring_hits.append((sub, a))
     if substring_hits:
         substring_hits.sort(key=lambda x: -x[0])
         return [{"score": s, "match_kind": "substring", **a} for s, a in substring_hits[:k]]
 
+    # Stage 2a: NPF (requires anchor_vec + rejected_log + thread_id)
+    if anchor_vec is not None and rejected_log is not None and thread_id is not None:
+        try:
+            from tinm_npf import rank_with_npf
+            return rank_with_npf(
+                artifacts=artifacts,
+                query=query,
+                anchor_vec=anchor_vec,
+                rejected_log=rejected_log,
+                thread_id=thread_id,
+                n_sr_cooccurrences=n_sr_cooccurrences,
+                k=k,
+            )
+        except Exception:
+            pass  # fall through to cosine fallback
+
+    # Stage 2b: cosine fallback (pre-v0.2.2 behaviour, always safe)
     embedded = [a for a in artifacts if a.get("embedding")]
     if not embedded:
         return []

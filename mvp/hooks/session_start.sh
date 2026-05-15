@@ -66,12 +66,14 @@ if [ -d "$TINM_PCP_DIR/.git" ]; then
     } >> "$_SYNC_LOG" 2>&1 || true
 fi
 
-# Gstack-style update check (best-effort, 24h cached, silent on error).
-# Prints a one-line notice into Claude's context if a newer version of
-# TINM has shipped. Controlled by ~/.tinm/config.json:update_notify
-# (default true) and auto_upgrade (default false).
+# F1: Upgrade notification (best-effort, 24h cached, 3s timeout, silent on error).
+# Emits a single line to stdout (injected into Claude's context by Claude Code).
+# Format: 💡 TINM vX.Y.Z available — respond 'upgrade' at the start of your
+#         next message to install automatically.
+# Controlled by ~/.tinm/config.json:update_notify (default true) and
+# auto_upgrade (default false).
 if [ -x "$VENV_PY" ]; then
-    "$VENV_PY" - << 'PYEOF' 2>/dev/null || true
+    timeout 3s "$VENV_PY" - << 'PYEOF' 2>/dev/null || true
 import os, sys, pathlib, subprocess
 sys.path.insert(0, str(pathlib.Path.home() / ".claude" / "skills" / "tinm"))
 try:
@@ -93,11 +95,10 @@ try:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        print(f"⏫ TINM v{latest} available — auto-upgrading in background.")
+        print(f"\U000026ab TINM v{latest} available — auto-upgrading in background.")
     else:
         print(
-            f"⏫ TINM update available: v{current} → v{latest}. "
-            f"Run `python ~/.claude/skills/tinm/tinm_upgrade.py` to apply."
+            f"\U0001f4a1 TINM v{latest} available — respond 'upgrade' at the start of your next message to install automatically."
         )
 except Exception:
     pass
