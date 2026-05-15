@@ -109,6 +109,5 @@ deleted.
 
 If you tried it: DM [@MmakhtarDiop](https://x.com/MmakhtarDiop) on X with the
 one thing that surprised you, broke for you, or did nothing for you.
-Beta v0.1 is collecting Sean Ellis answers — *would you be upset if
-TINM disappeared tomorrow?* A 1-line "yes because X" or "no because
-Y" is worth more than any GitHub star.
+A 1-line "yes because X" or "no because Y" is worth more than any
+GitHub star.
