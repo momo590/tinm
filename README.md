@@ -44,6 +44,7 @@ Every new Claude Code session today starts the same way: you scroll Slack, your 
 - **Auto-recall.** Past decisions, designs, and answers surface into your next session automatically — no `/load`, no file paste.
 - **Works with what you already use.** Three small hooks plug into Claude Code. Nothing else in your setup changes.
 - **Not locked to one client.** Memory is stored in an open format (PCP) — a simple JSON layout any AI client can read. Your context belongs to you, not to a vendor.
+- **Works with browser AI too.** ChatGPT, Claude.ai, Perplexity, Notion AI — copy any response with `@tinm save` on the first line and it lands in your TINM memory. Native desktop notification confirms each capture.
 
 > **What's PCP?** Personal Context Protocol. A vendor-neutral way to store AI conversation memory on disk. Other clients (Cursor, OpenClaw, Aider, …) can read the same memory through bundled adapters.
 
@@ -72,6 +73,29 @@ When you're ready to use TINM on your own work:
 ```
 
 Next session, ask anything that touches that decision — TINM brings it back without you re-pasting.
+
+## Capture from any AI tool (ChatGPT, Claude.ai, Perplexity, …)
+
+The browsers where you actually use ChatGPT or Perplexity have no hooks. TINM bridges them with an opt-in clipboard watcher: copy any response prefixed with `@tinm save` and it lands in your TINM memory with a native desktop notification.
+
+```bash
+# One-time enable (auto-starts with every future Claude Code session)
+~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_clipboard.py --enable
+```
+
+Then anywhere — ChatGPT web, Claude.ai, Perplexity, Notion AI, even a plain text file:
+
+```
+@tinm save
+
+<paste the AI response you want to remember>
+```
+
+Copy that block (Cmd/Ctrl+C). ~3 seconds later you get a system notification: `TINM captured to <thread>`. Done. The content is now searchable cross-session like any other TINM memory.
+
+**Privacy.** The watcher does nothing unless `@tinm save` is the first non-empty line — case-insensitive but exact. Trigger line is stripped, never stored. Clipboard is read, never modified.
+
+macOS and Linux. Disable anytime: `tinm_clipboard.py --disable`. Full docs in [`mvp/clients/clipboard_install.md`](mvp/clients/clipboard_install.md).
 
 ## How it works
 
