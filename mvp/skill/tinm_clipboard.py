@@ -257,29 +257,52 @@ def capture_to_tinm(content: str) -> bool:
         )
         return False
 
-    # Fire-and-forget: user_prompt.sh runs the full TINM pipeline (embeddings,
-    # NPF scoring, journal write) which can take 5-30s on first call (model
-    # cold-start). The clipboard daemon must not block on this — we write
-    # the payload to stdin, close it, and let the subprocess complete in the
-    # background. The user gets the notification immediately; the thread
-    # update lands a few seconds later.
+    # Wait for user_prompt.sh to complete before marking success.
+    # user_prompt.sh runs the full TINM pipeline (embeddings, NPF scoring,
+    # journal write) which takes 5-15s. We wait up to 30s — safe headroom.
+    # The push_throttle inside user_prompt.sh forks its own detached background
+    # worker for the git push, so start_new_session=True is not needed here.
     try:
         proc = subprocess.Popen(
             ["bash", str(hook)],
             stdin=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,  # detach so it survives the daemon
+            stderr=subprocess.PIPE,
         )
-        proc.stdin.write(json.dumps(normalized).encode())
-        proc.stdin.close()
+        _, stderr_bytes = proc.communicate(
+            input=json.dumps(normalized).encode(), timeout=30
+        )
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.communicate()  # drain to avoid zombie
+        print(
+            "tinm_clipboard: user_prompt.sh timed out after 30s — capture aborted.",
+            file=sys.stderr,
+        )
+        return False
     except Exception as e:
         print(f"tinm_clipboard: subprocess failed: {e}", file=sys.stderr)
         return False
 
+    if proc.returncode != 0:
+        err = stderr_bytes.decode(errors="replace") if stderr_bytes else ""
+        print(
+            f"tinm_clipboard: user_prompt.sh failed (exit {proc.returncode})"
+            + (f":\n{err}" if err else ""),
+            file=sys.stderr,
+        )
+        return False
+
+    if stderr_bytes:
+        print(
+            "tinm_clipboard: user_prompt.sh stderr:\n"
+            + stderr_bytes.decode(errors="replace"),
+            file=sys.stderr,
+        )
+
     _mark_captured(content)
 
-    # Visual feedback — native system notification (best-effort, never raises)
+    # Visual feedback — only fires after the thread write succeeded.
     preview = content.replace("\n", " ").strip()
     if len(preview) > 80:
         preview = preview[:77] + "..."

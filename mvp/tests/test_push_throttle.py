@@ -199,3 +199,48 @@ def test_cli_schedule_subcommand(tmp_path):
         marker = tmp_path / MARKER_FILENAME
         if marker.exists():
             marker.unlink()
+
+
+def test_cli_force_no_marker_commits_with_count_1(tmp_path):
+    """`force` with no pending marker: commits staged changes, count=1."""
+    _init_fake_repo(tmp_path)
+    initial = _commit_count(tmp_path)
+    (tmp_path / "threads").mkdir()
+    (tmp_path / "threads" / "fake.json").write_text('{"x":1}\n')
+
+    module_path = str(Path(__file__).parent.parent / "skill" / "push_throttle.py")
+    result = subprocess.run(
+        [sys.executable, module_path, "force", str(tmp_path)],
+        capture_output=True, text=True, timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+    assert not (tmp_path / MARKER_FILENAME).exists()
+    assert _commit_count(tmp_path) == initial + 1
+    log = subprocess.run(
+        ["git", "-C", str(tmp_path), "log", "--oneline", "-1"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert "1 writes coalesced" in log
+
+
+def test_cli_force_with_marker_cancels_it_and_uses_stored_count(tmp_path):
+    """`force` with pending marker (count=3): removes marker, uses count=3 in commit msg."""
+    _init_fake_repo(tmp_path)
+    initial = _commit_count(tmp_path)
+    (tmp_path / "threads").mkdir()
+    (tmp_path / "threads" / "fake.json").write_text('{"x":1}\n')
+    (tmp_path / MARKER_FILENAME).write_text("3")
+
+    module_path = str(Path(__file__).parent.parent / "skill" / "push_throttle.py")
+    result = subprocess.run(
+        [sys.executable, module_path, "force", str(tmp_path)],
+        capture_output=True, text=True, timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+    assert not (tmp_path / MARKER_FILENAME).exists()
+    assert _commit_count(tmp_path) == initial + 1
+    log = subprocess.run(
+        ["git", "-C", str(tmp_path), "log", "--oneline", "-1"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert "3 writes coalesced" in log

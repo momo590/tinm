@@ -112,4 +112,12 @@ spec.loader.exec_module(mod)
 mod.write_buffer(thread_id, info["session_id"], info["text"])
 PYEOF
 
+# Push on session end — fires immediately (no 30s delay) so peer host's
+# session_start pull gets the latest content even when sessions open back-to-back.
+PUSH_THROTTLE_SCRIPT="$HOME/.claude/skills/tinm/push_throttle.py"
+if [ -d "$TINM_PCP_DIR/.git" ] && [ -r "$PUSH_THROTTLE_SCRIPT" ] && [ -x "$VENV_PY" ]; then
+    "$VENV_PY" "$PUSH_THROTTLE_SCRIPT" force "$TINM_PCP_DIR" \
+        >>"$TINM_HOME/sync-$(hostname).log" 2>&1 &
+fi
+
 exit 0

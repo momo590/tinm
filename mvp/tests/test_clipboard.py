@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -133,29 +134,79 @@ def test_capture_no_current_thread_fails(tmp_path):
     assert result is False
 
 
-def test_capture_marks_after_success(tmp_path, monkeypatch):
-    # Write current_thread file
+def _setup_capture(tmp_path, monkeypatch):
+    """Shared setup: write current_thread + point _resolve_hook_path at a real file."""
     tinm_clipboard.CURRENT_FILE.write_text("test-thread\n")
-
-    # Mock the subprocess.Popen so we don't actually call user_prompt.sh
-    fake_proc = MagicMock()
-    fake_proc.communicate.return_value = (b"", b"")
-
-    # Also need to make the hook path "exist" for the check
     hooks_dir = tmp_path / "hooks"
     hooks_dir.mkdir(exist_ok=True)
     fake_hook = hooks_dir / "user_prompt.sh"
     fake_hook.write_text("#!/bin/bash\nexit 0\n")
+    monkeypatch.setattr(tinm_clipboard, "_resolve_hook_path", lambda: fake_hook)
+    monkeypatch.setattr(
+        tinm_clipboard, "normalize_for", lambda *a, **kw: {"prompt": "x", "session_id": "s"}
+    )
+    return fake_hook
+
+
+def test_capture_success_marks_and_notifies(tmp_path, monkeypatch):
+    """Success path: subprocess returns 0 → _mark_captured + _notify called."""
+    _setup_capture(tmp_path, monkeypatch)
+    fake_proc = MagicMock()
+    fake_proc.communicate.return_value = (b"", b"")
+    fake_proc.returncode = 0
+
+    notify_calls, mark_calls = [], []
+    monkeypatch.setattr(tinm_clipboard, "_notify", lambda title, message: notify_calls.append((title, message)))
+    monkeypatch.setattr(tinm_clipboard, "_mark_captured", lambda c: mark_calls.append(c))
 
     with patch.object(tinm_clipboard.subprocess, "Popen", return_value=fake_proc):
-        with patch("tinm_clipboard.Path") as mock_path:
-            # Make the hook path check succeed
-            mock_path.return_value.resolve.return_value.parent.parent.__truediv__.return_value.__truediv__.return_value.is_file.return_value = True
-            result = tinm_clipboard.capture_to_tinm("test content")
+        result = tinm_clipboard.capture_to_tinm("hello world")
 
-    # Whether the result is True depends on the mock chain — check that mark was attempted
-    # Simpler: just verify the function doesn't crash
-    # The test verifies the no-thread case primarily.
+    assert result is True
+    assert len(mark_calls) == 1
+    assert len(notify_calls) == 1
+    assert "test-thread" in notify_calls[0][0]
+
+
+def test_capture_timeout_no_mark_no_notify(tmp_path, monkeypatch):
+    """Timeout: hook hangs → TimeoutExpired → no mark, no notify, returns False."""
+    _setup_capture(tmp_path, monkeypatch)
+    fake_proc = MagicMock()
+    # First communicate() raises TimeoutExpired; second is the drain-after-kill call.
+    fake_proc.communicate.side_effect = [
+        subprocess.TimeoutExpired(cmd="bash", timeout=30),
+        (b"", b""),
+    ]
+
+    notify_calls, mark_calls = [], []
+    monkeypatch.setattr(tinm_clipboard, "_notify", lambda title, message: notify_calls.append((title, message)))
+    monkeypatch.setattr(tinm_clipboard, "_mark_captured", lambda c: mark_calls.append(c))
+
+    with patch.object(tinm_clipboard.subprocess, "Popen", return_value=fake_proc):
+        result = tinm_clipboard.capture_to_tinm("hello world")
+
+    assert result is False
+    assert len(mark_calls) == 0
+    assert len(notify_calls) == 0
+
+
+def test_capture_nonzero_exit_no_mark_no_notify(tmp_path, monkeypatch):
+    """Failure: subprocess returns non-zero → no mark, no notify, returns False."""
+    _setup_capture(tmp_path, monkeypatch)
+    fake_proc = MagicMock()
+    fake_proc.communicate.return_value = (b"", b"something went wrong")
+    fake_proc.returncode = 1
+
+    notify_calls, mark_calls = [], []
+    monkeypatch.setattr(tinm_clipboard, "_notify", lambda title, message: notify_calls.append((title, message)))
+    monkeypatch.setattr(tinm_clipboard, "_mark_captured", lambda c: mark_calls.append(c))
+
+    with patch.object(tinm_clipboard.subprocess, "Popen", return_value=fake_proc):
+        result = tinm_clipboard.capture_to_tinm("hello world")
+
+    assert result is False
+    assert len(mark_calls) == 0
+    assert len(notify_calls) == 0
 
 
 # ── check_once ──────────────────────────────────────────────────────────────

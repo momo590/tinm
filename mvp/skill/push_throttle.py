@@ -156,7 +156,8 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print(
             "usage: push_throttle.py schedule <pcp_dir>\n"
-            "       push_throttle.py _worker <pcp_dir> <window_s>",
+            "       push_throttle.py _worker <pcp_dir> <window_s>\n"
+            "       push_throttle.py force <pcp_dir>",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -171,6 +172,20 @@ if __name__ == "__main__":
         window_s = float(sys.argv[3])
         marker = pcp_dir / MARKER_FILENAME
         _worker(pcp_dir, marker, window_s)
+    elif cmd == "force":
+        pcp_dir = Path(sys.argv[2])
+        marker = pcp_dir / MARKER_FILENAME
+        count = 1
+        if marker.exists():
+            try:
+                count = int(marker.read_text().strip())
+            except (ValueError, OSError):
+                count = 1
+            try:
+                marker.unlink()
+            except OSError:
+                pass
+        _run_git(pcp_dir, count)
     else:
         print(f"unknown command: {cmd!r}", file=sys.stderr)
         sys.exit(2)
