@@ -1,0 +1,19 @@
+{
+  "pcp_version": "0.1",
+  "thread_id": "tinm-tour",
+  "metadata": {
+    "title": "TINM tour — Phase 1 paper walkthrough (demo seed)",
+    "created_at": "2026-05-14T19:36:03Z",
+    "last_updated": "2026-05-14T19:36:03Z",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "embedding_dim": 384,
+    "project_root": "~/TNIM (demo)",
+    "client_history": ["claude-code"],
+    "note": "Demo seed installed via `/tinm demo`."
+  },
+  "anchor": {
+    "update_count": 0,
+    "engaged_so_far": false
+  },
+  "trajectory": []
+}

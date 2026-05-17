@@ -1,0 +1,19 @@
+{
+  "pcp_version": "0.1",
+  "thread_id": "tinm-tour",
+  "metadata": {
+    "title": "TINM tour — Phase 1 paper walkthrough (demo seed)",
+    "created_at": "2026-05-14T19:36:03Z",
+    "last_updated": "2026-05-15T10:22:11Z",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "embedding_dim": 384,
+    "project_root": "/tmp/tinm-pollution-fixture",
+    "client_history": ["claude-code"],
+    "note": "Fixture mimicking the production v0.2.2 pollution bug — 5 canonical seed artifacts + 3 user-added artifacts accumulated after tinm_demo.py wrote tinm-tour to current_thread."
+  },
+  "anchor": {
+    "update_count": 0,
+    "engaged_so_far": false
+  },
+  "trajectory": []
+}

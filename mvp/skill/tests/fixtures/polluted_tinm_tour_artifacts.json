@@ -1,0 +1,54 @@
+{
+  "pcp_version": "0.1",
+  "thread_id": "tinm-tour",
+  "artifacts": [
+    {
+      "id": "pareto-plot",
+      "name": "Figure 1 Pareto plot",
+      "summary": "Canonical seed artifact #1.",
+      "source": "seed"
+    },
+    {
+      "id": "wiki2hop-results",
+      "name": "2WikiMultihopQA results",
+      "summary": "Canonical seed artifact #2.",
+      "source": "seed"
+    },
+    {
+      "id": "tinm-substrate",
+      "name": "TINM substrate doc",
+      "summary": "Canonical seed artifact #3.",
+      "source": "seed"
+    },
+    {
+      "id": "phase1-tokens-saved",
+      "name": "Phase 1 tokens saved",
+      "summary": "Canonical seed artifact #4.",
+      "source": "seed"
+    },
+    {
+      "id": "pcp-spec",
+      "name": "PCP v0 spec",
+      "summary": "Canonical seed artifact #5.",
+      "source": "seed"
+    },
+    {
+      "id": "user-fake-1",
+      "name": "User added artifact 1",
+      "summary": "Private user content that should NOT end up in the seed.",
+      "source": "approved_exchange"
+    },
+    {
+      "id": "user-fake-2",
+      "name": "User added artifact 2",
+      "summary": "More private content accumulated after the seed install.",
+      "source": "approved_exchange"
+    },
+    {
+      "id": "user-fake-3",
+      "name": "User added artifact 3",
+      "summary": "Yet more private content from later sessions.",
+      "source": "manual"
+    }
+  ]
+}
