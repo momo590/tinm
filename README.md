@@ -1,4 +1,6 @@
-# TINM — Claude Code remembers between sessions. Finally.
+# TINM — Cross-vendor memory for AI coding agents
+
+Open protocol (PCP), works across Claude Code, Cursor, OpenClaw, Aider, Codex, Continue.dev, plus browser-based AI. Reproducible benchmarks.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue)
@@ -37,7 +39,9 @@ macOS / Linux, ~3 minutes (most of it is `pip install`), fully reversible. The w
 
 ## The problem
 
-Every new Claude Code session today starts the same way: you scroll Slack, your last terminal, your own notes — then copy-paste yesterday's key decisions before any work begins. Or you grow `CLAUDE.md` until it becomes noise. Either way, the context Claude needs is somewhere — just not where Claude can see it.
+Every Claude Code session ends the same way: `/export` the conversation, or ask Claude to save the discussion to memory. Every new session starts the same way: 10 minutes re-explaining yesterday's decisions before any real work happens.
+
+Switch devices or clients and it gets worse — same repo access to grant, same docs to point to, same RAG index to wire up, then still re-explain because no client truly remembers between sessions.
 
 ## The solution
 

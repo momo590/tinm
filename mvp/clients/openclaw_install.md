@@ -7,7 +7,7 @@
 
 The OpenClaw plugin manifest places this hook to intercept incoming messages
 and bridge them to TINM's memory pipeline. Every prompt routed through
-OpenClaw (e.g. via WhatsApp / BumbleBee) gets captured and stored in your PCP
+OpenClaw (e.g. via a WhatsApp bridge or any other registered client) gets captured and stored in your PCP
 thread, exactly like Claude Code.
 
 ## Install

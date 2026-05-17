@@ -83,6 +83,63 @@ thread, the expected flow is:
    `~/.tinm/.venv/bin/python ~/.claude/skills/tinm/tinm_artifact.py <thread_id> find "<reference>"`
    and surface the top hit (name + ref + summary) to the user.
 
+## Writing artifact summaries (read this before every `tinm_artifact.py add`)
+
+The `--summary` you pass to `tinm_artifact.py add` is what the user will
+read back at session start, days or weeks later, with none of the in-session
+context that made the shorthand legible. Write it for re-reading by a human,
+not as a compressed agent-internal reference note.
+
+Rules, all enforced by your own care since this is a prompt-time concern, not
+a runtime one:
+
+1. **Plain prose, not a reference dump.** One or two coherent sentences (up to
+   a short paragraph). Not a slash-separated list of fields, not a checklist.
+2. **One language per summary.** Match the language the user has been writing
+   in this thread. Do not code-switch French/English mid-sentence even if your
+   internal reasoning did.
+3. **Expand project shorthand on first use, or skip it.** If you must mention a
+   task code like `T2`, write "the LLM provider abstraction task (T2)" the
+   first time. Better: omit the code entirely and describe the work. The user
+   does not memorise their own task numbers between sessions.
+4. **No status emojis in the summary body** (✅ ❌ ⚠️ 🚧). They are visual
+   decoration that adds zero recall value. Status belongs in dedicated fields
+   if at all.
+5. **No inline dated lock phrases.** Do not write "locked 2026-05-16",
+   "verrouillé hier", "decided yesterday". The artifact's `created_at` is
+   already on disk and surfaces relatively at display time. Inline dates rot.
+6. **No file path soup as prose.** If the artifact references a file, put it
+   in `--ref`, not inline in the summary. Inline paths break the sentence flow
+   and the user already gets the ref displayed alongside.
+7. **Self-contained.** Assume the user reads the summary with no surrounding
+   conversation. If the summary requires reading three other artifacts to make
+   sense, it is not done.
+
+### Good vs bad
+
+**Bad** (what the writer agent tends to produce naturally — fictional example):
+
+> Plan d'architecture verrouillé pour PaymentService v2 après /plan-eng-review +
+> outside voice. Stack: Node core + ProviderAdapter abstraction (stripe default,
+> braintree opt-in) + Redis idempotency layer + Kafka event bus. 14 tasks
+> T1-T14 avec lanes A-F. Approach C strict + deadline 5 jours. T0 BLOCKER
+> tête de Lane A.
+
+**Good** (the same artifact, rewritten):
+
+> We locked the PaymentService v2 engineering plan. The service runs on Node
+> with an abstraction layer that defaults to Stripe and can switch to
+> Braintree if a customer needs it. Redis holds idempotency keys so retries
+> are safe, and a Kafka bus emits events to downstream subscribers. The
+> first task is to extract the common gateway logic into its own module —
+> nothing else can start until that lands. Target landing date is five
+> working days out.
+
+The good version is longer in characters and shorter in cognitive load. That
+is the trade you are making — and the right one. The bad version is dense to
+read, ages poorly, and assumes the reader has the whole project graph in their
+head. The good version reads cleanly with zero context.
+
 ## What NOT to do
 
 - Do not create a new thread without explicit user instruction; threads
@@ -90,6 +147,9 @@ thread, the expected flow is:
 - Do not write to `~/.tinm/` outside of these scripts.
 - Do not echo the raw anchor vector to the conversation — it is opaque
   numeric state, not user-readable content.
+- Do not write artifact summaries in shorthand. See "Writing artifact
+  summaries" above — the summary you write is what the human reads next
+  session, not a note to your future-self.
 
 ## PCP v0 file format reference
 

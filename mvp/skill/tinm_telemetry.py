@@ -1,9 +1,8 @@
 """
 TINM self-instrumented telemetry — measure the value TINM actually generates.
 
-Wedge: identified 2026-05-14 turn 71 (Mouhamadou). See memory
-[[tinm-telemetry-wedge]]. Must ship with v0.2, BEFORE Jordan's first install,
-so his first session already produces datapoints.
+Ships with v0.2 so early-adopter sessions produce datapoints from day one
+(otherwise we have no way to know whether TINM is actually helping).
 
 Privacy contract (NON-NEGOTIABLE):
   - Opt-in explicit at install time. Default = OFF.
@@ -330,7 +329,7 @@ Data lives at ~/.tinm/telemetry.jsonl, on your machine only.
 
 Enable telemetry?
   [y] yes, local-only (recommended for early users)
-  [s] yes, and share aggregates with Mouhamadou (no content, just counts)
+  [s] yes, and share aggregates with TINM maintainers (no content, just counts)
   [n] no thanks
 """
 
