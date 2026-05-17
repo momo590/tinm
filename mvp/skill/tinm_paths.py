@@ -12,6 +12,7 @@ Layout, with defaults:
         current_thread                           # per-machine session marker
         ${TINM_PCP_DIR:-${TINM_HOME}/pcp}/       # PCP store — SAFE to sync
             threads/<thread_id>.json
+            seeds/<seed_id>.json                 # read-only bundled demos
             artifacts/<thread_id>.json
 """
 from __future__ import annotations
@@ -54,6 +55,7 @@ TINM_HOME: Path = _tinm_home()
 TINM_PCP_DIR: Path = _tinm_pcp_dir()
 
 THREADS_DIR: Path = TINM_PCP_DIR / "threads"
+SEEDS_DIR: Path = TINM_PCP_DIR / "seeds"
 ARTIFACTS_DIR: Path = TINM_PCP_DIR / "artifacts"
 ARTIFACTS_COLD_DIR: Path = TINM_PCP_DIR / "artifacts_cold"
 REJECTED_DIR: Path = TINM_PCP_DIR / "rejected"

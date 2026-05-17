@@ -18,7 +18,7 @@ import json
 import sys
 from pathlib import Path
 
-from tinm_paths import ARTIFACTS_DIR, CURRENT_FILE, THREADS_DIR
+from tinm_paths import ARTIFACTS_DIR, SEEDS_DIR, THREADS_DIR
 
 # Recap caps (spec §10 decision 3 + outside-voice §12)
 MAX_NAMED_ARTIFACTS = 5
@@ -123,29 +123,51 @@ def _format_context(thread: dict, artifacts: dict, n_trajectory: int) -> str:
     return "\n".join(lines)
 
 
+def _resolve_paths(thread_id: str) -> tuple[Path, Path] | None:
+    """Resolve (thread_json, artifacts_json) for an id across namespaces.
+
+    User threads in `pcp/threads/` win over seeds with the same id — the
+    open-question recommendation in the v0.2.3 design doc. Returns None
+    if the id is in neither namespace.
+    """
+    user_thread = THREADS_DIR / f"{thread_id}.json"
+    if user_thread.exists():
+        return user_thread, ARTIFACTS_DIR / f"{thread_id}.json"
+    seed_thread = SEEDS_DIR / f"{thread_id}.json"
+    if seed_thread.exists():
+        return seed_thread, SEEDS_DIR / f"{thread_id}.artifacts.json"
+    return None
+
+
 def load_thread(thread_id: str, n_trajectory: int = 5) -> str:
-    thread_path = THREADS_DIR / f"{thread_id}.json"
-    if not thread_path.exists():
+    resolved = _resolve_paths(thread_id)
+    if resolved is None:
         raise FileNotFoundError(
-            f"Thread {thread_id!r} not found at {thread_path}. "
+            f"Thread {thread_id!r} not found in {THREADS_DIR} or {SEEDS_DIR}. "
             f"Run tinm_init.py first."
         )
+    thread_path, arts_path = resolved
 
     thread = json.loads(thread_path.read_text())
     _check_version(thread["pcp_version"])
 
-    arts_path = ARTIFACTS_DIR / f"{thread_id}.json"
     artifacts = (
         json.loads(arts_path.read_text())
         if arts_path.exists()
         else {"artifacts": []}
     )
 
-    # Loading a thread also marks it as current — so the SessionStart hook
-    # and the MCP `current_thread` tool consistently agree on which thread
-    # the user is currently working in.
-    CURRENT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CURRENT_FILE.write_text(thread_id + "\n")
+    # NOTE: the previous version wrote `thread_id` to `~/.tinm/current_thread`
+    # here as a side-effect of loading context. That was the smoking gun for
+    # the v0.2.3 thread-pollution bug — a read-style operation mutated the
+    # ambient global pointer, so any later prompt appended to whatever was
+    # loaded last. The global pointer is being phased out; sessions get
+    # their thread from the hook-frozen env (Lane C). Explicit user override
+    # via `tinm load <id>` will write a per-cwd override marker once Lane C
+    # defines the env contract.
+    # TODO(lane-c): write a per-cwd override marker (not the global file)
+    # so an explicit `tinm load <id>` survives across prompts within the
+    # same cwd without polluting other workspaces.
 
     return _format_context(thread, artifacts, n_trajectory)
 
