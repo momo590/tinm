@@ -123,6 +123,36 @@ class TestSessionStartUpdateNotification:
         # Should NOT emit the 💡 respond-upgrade instruction
         assert "respond" not in out, f"Expected no 'respond' text in auto-upgrade output, got: {out!r}"
 
+    def test_emits_correct_version_030_in_notification(self, monkeypatch, tmp_path):
+        """v0.3.0 release: when remote advertises 0.3.0, the notification shows it."""
+        import io
+        from contextlib import redirect_stdout
+
+        import tinm_update_check as uc
+
+        monkeypatch.setattr(uc, "_fetch_remote_version", lambda: "0.3.0")
+        monkeypatch.setattr(uc, "CACHE_FILE", tmp_path / "update-cache.json")
+        vfile = tmp_path / "VERSION"
+        vfile.write_text("0.1.0\n")
+        monkeypatch.setattr(uc, "LOCAL_VERSION_FILE", vfile)
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            r = uc.check_for_update()
+            if r.get("has_update"):
+                latest = r.get("latest")
+                print(
+                    f"\U0001f4a1 TINM v{latest} available — respond 'upgrade' at the start "
+                    "of your next message to install automatically."
+                )
+        out = output.getvalue()
+
+        assert r["current"] == "0.1.0"
+        assert r["latest"] == "0.3.0"
+        assert r["has_update"] is True
+        assert "0.3.0" in out, f"Expected version 0.3.0 in output, got: {out!r}"
+        assert "\U0001f4a1 TINM" in out
+
 
 # ---------------------------------------------------------------------------
 # Test 2: user_prompt.sh upgrade trigger — first turn
