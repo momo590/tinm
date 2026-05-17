@@ -20,6 +20,14 @@ from pathlib import Path
 
 from tinm_paths import ARTIFACTS_DIR, SEEDS_DIR, THREADS_DIR
 
+# v0.2.3 L3: read-time legacy artifact renderer (gated by TINM_RENDER_LEGACY).
+# Import is best-effort — if the module is missing we degrade to passthrough.
+try:
+    from tinm_renderer import humanize_if_enabled as _humanize
+except Exception:  # pragma: no cover — defensive
+    def _humanize(body: str) -> str:  # type: ignore[no-redef]
+        return body
+
 # Recap caps (spec §10 decision 3 + outside-voice §12)
 MAX_NAMED_ARTIFACTS = 5
 MAX_APPROVED_EXCHANGES = 2
@@ -97,7 +105,7 @@ def _format_context(thread: dict, artifacts: dict, n_trajectory: int) -> str:
             aliases = a.get("aliases") or []
             alias_part = f" _(aka: {', '.join(aliases)})_" if aliases else ""
             lines.append(f"- **{a['name']}**{ref_part}{alias_part}")
-            lines.append(f"  - {a['summary']}")
+            lines.append(f"  - {_humanize(a['summary'])}")
     elif not approved:
         lines.append("## Named artifacts")
         lines.append("_(none registered yet)_")
@@ -117,7 +125,7 @@ def _format_context(thread: dict, artifacts: dict, n_trajectory: int) -> str:
             turn = (a.get("approval") or {}).get("next_user_turn", "?")
             tag = f" _via t{turn} «{trigger}»_" if trigger else ""
             lines.append(f"- **{a['name']}**{tag}")
-            lines.append(f"  - {a['summary'][:300]}")
+            lines.append(f"  - {_humanize(a['summary'])[:300]}")
         lines.append("")
 
     return "\n".join(lines)

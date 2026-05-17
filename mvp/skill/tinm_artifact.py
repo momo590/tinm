@@ -27,6 +27,13 @@ from pathlib import Path
 
 from lockfile import pcp_lock
 from tinm_paths import ARTIFACTS_DIR, REJECTED_DIR, THREADS_DIR, TINM_PCP_DIR
+
+# v0.2.3 L3: read-time legacy artifact renderer (gated by TINM_RENDER_LEGACY).
+try:
+    from tinm_renderer import humanize_if_enabled as _humanize
+except Exception:  # pragma: no cover — defensive
+    def _humanize(body: str) -> str:  # type: ignore[no-redef]
+        return body
 from tinm_scoring import EXPECTED_DIM, _encode, rank_artifacts
 from tinm_telemetry import log_event
 
@@ -326,7 +333,7 @@ def _format_hits_md(hits: list[dict]) -> str:
         if h.get("source") == "conv_index":
             turn_id = h.get("turn_id", "?")
             role = h.get("role", "?")
-            preview = h.get("text_preview", "")[:100]
+            preview = _humanize(h.get("text_preview", ""))[:100]
             score = h.get("score", 0.0)
             lines.append(
                 f"- [conv] Turn {turn_id} ({role}): {preview}...  "
@@ -342,7 +349,7 @@ def _format_hits_md(hits: list[dict]) -> str:
                 f"_[{match_kind} match, score={h['score']:.3f}]_"
             )
             if h.get("summary"):
-                lines.append(f"  - {h['summary']}")
+                lines.append(f"  - {_humanize(h['summary'])}")
     return "\n".join(lines)
 
 
