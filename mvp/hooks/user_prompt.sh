@@ -53,24 +53,25 @@ HOOK_WARN_LOG="$TINM_HOME/hook-warn-$(hostname | tr '.' '-').log"
 [ -x "$VENV_PY" ] || exit 0
 [ -r "$UPDATE_SCRIPT" ] || exit 0
 
-# Extract prompt text, transcript path, and session ID from the captured JSON.
-# All three are needed early — transcript path and session ID before the F1
-# upgrade check, prompt text before everything else.
-PROMPT_TEXT="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
-    'import json, sys; print(json.load(sys.stdin).get("prompt", ""), end="")' \
+# Extract prompt text, transcript path, and session ID from the captured JSON
+# in a SINGLE Python invocation. Three separate `python -c ...` calls cost
+# ~3 × 60ms cold-start each ≈ 180ms wasted on a hot path that gates at 200ms.
+# Output: 3 lines (prompt\ntranscript\nsession_id). The shell reads them
+# into a temporary array and assigns.
+_JSON_TRIPLE="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
+    'import json, sys
+d = json.load(sys.stdin)
+print(d.get("prompt", ""))
+print(d.get("transcript_path", ""))
+print(d.get("session_id", ""))' \
     2>/dev/null)"
-[ -n "$PROMPT_TEXT" ] || exit 0
 
-# Heuristic log for native-compaction detection fallback. Consumed by
-# tinm_compaction_detect.heuristic_compaction_fired() when the PreCompact
-# marker is absent (e.g., hook not yet installed on peer host, or
-# pre-marker session). Cheap: one wc -l + one printf >> file.
-TRANSCRIPT_PATH="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
-    'import json, sys; print(json.load(sys.stdin).get("transcript_path", ""), end="")' \
-    2>/dev/null)"
-SESSION_ID="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
-    'import json, sys; print(json.load(sys.stdin).get("session_id", ""), end="")' \
-    2>/dev/null)"
+# Parse the 3 newline-separated values back. mapfile/readarray is bash-only;
+# fall back to a portable read pattern (works in bash 3.2+).
+PROMPT_TEXT="$(printf '%s' "$_JSON_TRIPLE" | sed -n '1p')"
+TRANSCRIPT_PATH="$(printf '%s' "$_JSON_TRIPLE" | sed -n '2p')"
+SESSION_ID="$(printf '%s' "$_JSON_TRIPLE" | sed -n '3p')"
+[ -n "$PROMPT_TEXT" ] || exit 0
 
 # ── DEC-2: read frozen thread name from per-session handoff file ─────────
 THREAD_ID=""
