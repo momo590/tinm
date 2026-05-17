@@ -61,7 +61,13 @@ def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def init_thread(thread_id: str, title: str, project_root: str | None = None) -> Path:
+def init_thread(
+    thread_id: str,
+    title: str,
+    project_root: str | None = None,
+    *,
+    write_current_pointer: bool = True,
+) -> Path:
     if not SLUG_RE.match(thread_id):
         raise ValueError(
             f"thread_id {thread_id!r} must be a lowercase slug "
@@ -111,12 +117,13 @@ def init_thread(thread_id: str, title: str, project_root: str | None = None) -> 
     with pcp_lock(TINM_PCP_DIR):
         _atomic_write_json(thread_path, thread)
         _atomic_write_json(artifacts_path, artifacts)
-    # A newly initialised thread becomes the current thread — that is the
-    # ergonomically obvious behaviour for `tinm init … && /tinm load`.
-    # current_thread is machine-local (top of TINM_HOME, outside the synced
-    # subtree) so each host can carry its own session marker.
-    CURRENT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CURRENT_FILE.write_text(thread_id + "\n")
+    # Direct `tinm init` calls still update CURRENT_FILE for muscle-memory
+    # compatibility. The v0.2.3 provenance path opts out via
+    # write_current_pointer=False — the per-cwd resolver and hook env are
+    # the source of truth now (DEC-2). Migration deletes this file outright.
+    if write_current_pointer:
+        CURRENT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        CURRENT_FILE.write_text(thread_id + "\n")
     return thread_path
 
 
