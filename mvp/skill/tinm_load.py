@@ -74,6 +74,22 @@ def _format_context(thread: dict, artifacts: dict, n_trajectory: int) -> str:
         lines.append(f"_project root: `{meta['project_root']}`_")
     lines.append("")
 
+    # L4 (v1) — next-action surface. Best-effort: any import or read
+    # error must NOT prevent the recap from rendering. The block is
+    # placed near the top so it's the first thing Claude sees: it's the
+    # "where were we?" answer this whole wedge exists to provide.
+    try:
+        from tinm_next_action import next_action_block
+
+        nb = next_action_block(thread["thread_id"])
+        if nb:
+            lines.append(nb)
+            lines.append("")
+    except Exception:
+        # Defensive: a broken next-action block must never block the
+        # recap. Stay silent and continue rendering everything else.
+        pass
+
     traj = thread.get("trajectory", [])
     if traj:
         recent = traj[-n_trajectory:]

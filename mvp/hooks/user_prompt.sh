@@ -124,6 +124,34 @@ if [ -n "$SESSION_ID" ] && [ -n "$PROMPT_TEXT" ] && [ -x "$VENV_PY" ] && [ -r "$
 fi
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ── L4: Next-action signal extractor (v1 MVP) ────────────────────────────────
+# Best-effort regex scan of the user's prompt for "done" / "next" /
+# "waiting on" / "decided" / "failure" signals. Persisted as JSONL under
+# $TINM_PCP_DIR/signals/<thread_id>.jsonl for the SessionStart loader to
+# read back into a "Picking up from..." block at the next session.
+# Stdin-piped through python to avoid shell-quoting hazards on arbitrary
+# prompt content. Silent on error — never blocks the hook.
+NEXT_ACTION_SCRIPT="$SKILL_DIR/tinm_next_action.py"
+if [ -r "$NEXT_ACTION_SCRIPT" ] && [ -x "$VENV_PY" ] && [ -n "$PROMPT_TEXT" ]; then
+    printf '%s' "$PROMPT_TEXT" | \
+        SKILL_DIR="$SKILL_DIR" THREAD_ID="$THREAD_ID" TURN_N="$_TRANSCRIPT_LINES" \
+        "$VENV_PY" - 2>>/tmp/tinm_hook.log << 'PYEOF' || true
+import os, sys
+sys.path.insert(0, os.environ["SKILL_DIR"])
+from tinm_next_action import record_signals
+
+thread_id = os.environ.get("THREAD_ID", "")
+try:
+    turn = int(os.environ.get("TURN_N", "0") or "0")
+except ValueError:
+    turn = 0
+text = sys.stdin.read()
+if thread_id and text:
+    record_signals(thread_id, turn, "user", text)
+PYEOF
+fi
+# ─────────────────────────────────────────────────────────────────────────────
+
 # ── F1: Upgrade trigger ──────────────────────────────────────────────────────
 # If the first 20 characters of the prompt (stripped, lowercased) start with
 # "upgrade" AND this is the first user turn (transcript has < 4 lines), launch
