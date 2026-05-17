@@ -6,10 +6,18 @@ Targets: avoid GitHub API rate limits, keep git history readable, preserve
 cross-machine latency <30s.
 
 Approach: each UserPromptSubmit hook calls schedule_push(). The first call in
-a quiet window writes a marker file and forks a background process that sleeps
-30s then does a single `git add . && git commit && git push`. Subsequent calls
-within the window are no-ops — the marker file's existence indicates a push
-is already scheduled.
+a quiet window writes a marker file and spawns a detached background process
+(subprocess.Popen with start_new_session=True) that sleeps 30s then does a
+single `git add . && git commit && git push`. Subsequent calls within the
+window are no-ops — the marker file's existence indicates a push is already
+scheduled.
+
+Implementation note (v0.3.0): the worker is spawned via subprocess.Popen
+rather than os.fork() to silence Python 3.12+'s DeprecationWarning about
+forking in multi-threaded processes (Claude Code hook runtime has live
+threads). This mirrors the pattern already used by tinm_digest.py for the
+digest worker. The child re-enters this module via the `_worker` CLI
+subcommand defined at the bottom of the file.
 
 Important: this module assumes pcp_lock from lockfile.py is held during the
 actual git operations. The throttle layer schedules; the lock layer serializes.
@@ -34,11 +42,17 @@ COMMIT_MSG_TEMPLATE = "tinm: sync {ts} from {hostname} ({count} writes coalesced
 
 
 def schedule_push(pcp_dir: str | Path, *, window_s: float = THROTTLE_WINDOW_S) -> bool:
-    """Schedule a push; returns True iff a new background worker was forked.
+    """Schedule a push; returns True iff a new background worker was spawned.
 
     Multiple calls within window_s coalesce into a single push. The worker
     reads the marker file's mtime at sleep-end to confirm it should still push
     (it should), and increments the coalesced-count for the commit message.
+
+    The worker is spawned via subprocess.Popen with start_new_session=True
+    (detached from this process group, fully redirected stdio) so the caller
+    returns in ~1-5ms while the worker sleeps through the throttle window.
+    No os.fork() — that emits a DeprecationWarning under Python 3.12+ when
+    the parent has live threads (which Claude Code's hook runtime does).
     """
     pcp_dir = Path(pcp_dir)
     marker = pcp_dir / MARKER_FILENAME
@@ -50,37 +64,20 @@ def schedule_push(pcp_dir: str | Path, *, window_s: float = THROTTLE_WINDOW_S) -
     pcp_dir.mkdir(parents=True, exist_ok=True)
     marker.write_text("1")
 
-    pid = os.fork() if hasattr(os, "fork") else None
-    if pid == 0:
-        # Child: detach from the parent's stdio so callers that wait for our
-        # stdout to close (e.g., subprocess.run from a hook) don't hang while
-        # the child sleeps through the throttle window.
-        try:
-            os.setsid()
-        except OSError:
-            pass
-        try:
-            devnull = os.open(os.devnull, os.O_RDWR)
-            os.dup2(devnull, 0)
-            os.dup2(devnull, 1)
-            os.dup2(devnull, 2)
-            if devnull > 2:
-                os.close(devnull)
-        except OSError:
-            pass
-        try:
-            _worker(pcp_dir, marker, window_s)
-        finally:
-            os._exit(0)
-    elif pid is None:
-        subprocess.Popen(
-            [sys.executable, os.path.abspath(__file__),
-             "_worker", str(pcp_dir), str(window_s)],
-            start_new_session=True,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+    # Prefer the TINM venv interpreter if reachable, else fall back to
+    # whatever Python is invoking us. Same selection logic as tinm_digest.py
+    # so the worker has the same dependency surface as the parent.
+    venv_py = Path.home() / ".tinm" / ".venv" / "bin" / "python"
+    py = str(venv_py) if venv_py.is_file() else sys.executable
+
+    subprocess.Popen(
+        [py, os.path.abspath(__file__),
+         "_worker", str(pcp_dir), str(window_s)],
+        start_new_session=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     return True
 
 
