@@ -42,12 +42,25 @@ def _index_path(session_id: str) -> Path:
     return BUFFER_DIR / f"{INDEX_PREFIX}{session_id}.jsonl"
 
 
-def add_turn(session_id: str, turn_id: int, role: str, text: str) -> None:
+def add_turn(
+    session_id: str,
+    turn_id: int,
+    role: str,
+    text: str,
+    *,
+    defer_embedding: bool = False,
+) -> None:
     """Add a turn to the conversation index.
 
     Skips empty/whitespace-only text. Enforces MAX_ENTRIES cap by discarding
     oldest entries. Uses atomic write (write to .tmp then rename) so a crash
     mid-write never leaves a corrupted index file.
+
+    v0.3.0: pass `defer_embedding=True` to write the entry with an empty
+    embedding (and a `defer=True` flag); the async anchor worker backfills
+    embeddings later via `backfill_embeddings(session_id)`. This is how the
+    user_prompt.sh hot path avoids paying the ~6-8s SentenceTransformer
+    cold-import cost on every prompt.
     """
     if not text or not text.strip():
         return
@@ -57,13 +70,16 @@ def add_turn(session_id: str, turn_id: int, role: str, text: str) -> None:
     # Load existing entries
     entries = _load(path)
 
-    # Compute embedding — gracefully degrade to empty list if
-    # sentence-transformers is not installed or encoding fails.
-    # Use the module-level _encode so tests can monkeypatch it.
-    try:
-        emb = _encode(text[:1000])  # cap input for speed
-    except Exception:
-        emb = []
+    if defer_embedding:
+        emb: list[float] = []
+    else:
+        # Compute embedding — gracefully degrade to empty list if
+        # sentence-transformers is not installed or encoding fails.
+        # Use the module-level _encode so tests can monkeypatch it.
+        try:
+            emb = _encode(text[:1000])  # cap input for speed
+        except Exception:
+            emb = []
 
     entry = {
         "turn_id": turn_id,
@@ -71,6 +87,12 @@ def add_turn(session_id: str, turn_id: int, role: str, text: str) -> None:
         "text_preview": text[:200],
         "embedding": emb,
     }
+    if defer_embedding:
+        # Preserve full text for later backfill — the index stores only
+        # text_preview (200 chars), but the embedder caps input at 1000
+        # so it should match what add_turn(defer=False) would produce.
+        entry["text_for_embed"] = text[:1000]
+        entry["defer"] = True
     entries.append(entry)
 
     # Enforce max cap — keep the *most recent* MAX_ENTRIES entries
@@ -134,6 +156,56 @@ def find(session_id: str, query: str, k: int = 3) -> list[dict]:
             "source": "conv_index",
         })
     return results
+
+
+def backfill_embeddings(session_id: str) -> int:
+    """Encode any deferred entries in this session's index.
+
+    Called by `_anchor_worker.py` after the (already-loaded) sentence-
+    transformers model is warm. Atomically rewrites the file with the
+    encoded vectors filled in. Returns the number of entries updated.
+
+    No-op if the file doesn't exist, has no deferred entries, or the
+    encoder is unavailable (returns 0 in all cases).
+    """
+    path = _index_path(session_id)
+    if not path.is_file():
+        return 0
+    entries = _load(path)
+    if not entries:
+        return 0
+
+    updated = 0
+    for e in entries:
+        if not e.get("defer"):
+            continue
+        text = e.get("text_for_embed") or e.get("text_preview") or ""
+        if not text:
+            e.pop("defer", None)
+            e.pop("text_for_embed", None)
+            continue
+        try:
+            e["embedding"] = _encode(text)
+        except Exception:
+            # Leave embedding empty — find() degrades to no-hit gracefully.
+            continue
+        e.pop("defer", None)
+        e.pop("text_for_embed", None)
+        updated += 1
+
+    if updated == 0:
+        return 0
+
+    tmp = path.with_suffix(".tmp")
+    try:
+        with tmp.open("w") as f:
+            for e in entries:
+                f.write(json.dumps(e) + "\n")
+        tmp.replace(path)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        return 0
+    return updated
 
 
 def clear(session_id: str) -> None:

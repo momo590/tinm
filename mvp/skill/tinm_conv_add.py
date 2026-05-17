@@ -22,6 +22,9 @@ except (IndexError, ValueError):
 try:
     text = sys.stdin.read()
     from tinm_conv_index import add_turn
-    add_turn(session_id, turn_id, role, text)
+    # v0.3.0: defer embedding to the async anchor worker so this call
+    # returns in < 100ms even on the SentenceTransformer cold-import
+    # path. The worker calls backfill_embeddings() after the model loads.
+    add_turn(session_id, turn_id, role, text, defer_embedding=True)
 except Exception:
     sys.exit(0)

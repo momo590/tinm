@@ -1,19 +1,47 @@
-"""Append a user turn to a PCP v0 thread, EMA-update the anchor.
+"""Append a user turn to a PCP v0 thread (HOT PATH — must stay < 100ms p99).
 
 Mirrors the TINM-lite v2 mechanism from the paper (benchmark/agents/
 tinm_lite.py) but operates on the persistent JSON store instead of in-
 memory state. L1 activation threshold is ON by default — TINM engages
 only when turn ≥ 3 OR the current query contains a pronoun/demonstrative.
-Below threshold, the trajectory is still appended and the anchor still
-updated (so it is ready when it engages), but `anchor.engaged_so_far`
-flips only once L1 trips.
+
+── v0.3.0 hot-path refactor ────────────────────────────────────────────────
+Pre-v0.3.0 this module loaded sentence-transformers + the all-MiniLM-L6-v2
+model SYNCHRONOUSLY on every user prompt — 6-8s per call, blocking the
+UserPromptSubmit hook. The bench (mvp/scripts/bench_hooks.sh) measured
+p99 = 17.8s, 89× the 200ms gate.
+
+v0.3.0 splits the work:
+
+  Hot path (this module, target < 100ms p99):
+    • Append the turn to the thread's trajectory (string ops).
+    • Compute top_terms (cheap).
+    • Set engaged_so_far based on turn number + anaphora regex.
+    • Write the thread JSON back.
+    • Spawn `_anchor_worker.py` via subprocess.Popen(start_new_session=True).
+    • Read the pending hint from the PREVIOUS turn's worker output if it
+      exists and matches the current thread_id; emit to stdout and delete.
+
+  Async worker (_anchor_worker.py, runs 6-8s in the background):
+    • Lazy-loads sentence-transformers.
+    • Encodes the just-appended query.
+    • EMA-updates the anchor vector under the PCP lock.
+    • If the query was anaphoric, composes the trajectory hint and writes
+      it to `<pcp>/threads/.pending_hint-<thread_id>.json` for the NEXT
+      turn to consume.
+
+One-turn lag is the intentional tradeoff: hint on turn N+1 reflects N.
+For typical sessions (≥ 6 turns when L1 engages) this is invisible. The
+hot path NEVER imports sentence_transformers — `test_tinm_update_async.py`
+asserts this via module-import inspection.
 
 Embedding model: sentence-transformers/all-MiniLM-L6-v2 (must match
 metadata.embedding_model in the thread file).
 
 Usage:
     python tinm_update.py <thread_id> --query "..." [--role user] [--client claude-code]
-    python tinm_update.py <thread_id> --query "..." --emit-hint   # prints trajectory hint to stdout
+    python tinm_update.py <thread_id> --query "..." --emit-hint   # prints prior turn's hint, dispatches new worker
+    python tinm_update.py <thread_id> --query "..." --legacy-sync # SYNCHRONOUS path (testing/debug only)
 """
 from __future__ import annotations
 
@@ -21,12 +49,12 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
-
-from contextlib import nullcontext
 
 from lockfile import pcp_lock
 from tinm_paths import THREADS_DIR, TINM_PCP_DIR
@@ -70,9 +98,10 @@ _ANAPHORIC_TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 
-_MODEL = None  # lazy-loaded; loading takes 2-5s and we want a clean error first
 
-
+# ---------------------------------------------------------------------------
+# Pure helpers (no embedding, cheap).
+# ---------------------------------------------------------------------------
 def _top_query_terms(trajectory: list[dict], n: int = 5) -> list[str]:
     """Top N non-stopword terms by frequency across all user queries."""
     from collections import Counter
@@ -90,9 +119,6 @@ def _format_trajectory_hint(thread: dict, current_turn: int) -> str:
     """Format the TINM trajectory hint for stdout injection.
 
     Returns empty string if L1 not engaged or no prior queries exist.
-    The hint lists only user queries (never assistant responses) and includes
-    a disambiguation instruction so Claude uses queries — not intermediate
-    responses — to resolve anaphora.
     """
     if not thread["anchor"].get("engaged_so_far"):
         return ""
@@ -128,28 +154,6 @@ def _contains_anaphora(query: str) -> bool:
     return bool(_ANAPHORIC_TOKEN_RE.search(query))
 
 
-def _get_model():
-    global _MODEL
-    if _MODEL is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError as e:
-            print(
-                "error: sentence-transformers not installed. "
-                "See mvp/README.md for install instructions.",
-                file=sys.stderr,
-            )
-            raise SystemExit(1) from e
-        _MODEL = SentenceTransformer(EXPECTED_MODEL)
-    return _MODEL
-
-
-def _encode(text: str) -> list[float]:
-    import numpy as np
-    vec = _get_model().encode(text, convert_to_numpy=True, show_progress_bar=False)
-    return [float(x) for x in np.asarray(vec).ravel()]
-
-
 def _atomic_write_json(path: Path, payload: dict) -> None:
     """Write JSON atomically: temp file in same directory, then rename."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -168,40 +172,133 @@ def _atomic_write_json(path: Path, payload: dict) -> None:
         raise
 
 
-def _compute_alpha(
-    query_vec: list[float],
-    anchor_vec: list[float] | None,
+# ---------------------------------------------------------------------------
+# Async dispatch — mirrors tinm_digest.launch_digest_async (the pattern of
+# record that works in production today).
+# ---------------------------------------------------------------------------
+def _pending_hint_path(thread_id: str, pcp_dir: Path | None = None) -> Path:
+    """Resolve `<pcp_dir>/threads/.pending_hint-<thread_id>.json`.
+
+    Default pcp_dir is the configured TINM_PCP_DIR.
+    """
+    base = pcp_dir if pcp_dir is not None else TINM_PCP_DIR
+    return Path(base) / "threads" / f".pending_hint-{thread_id}.json"
+
+
+def read_pending_hint(
+    thread_id: str,
     *,
-    adaptive: bool,
-    alpha_min: float,
-    alpha_max: float,
-    fixed_alpha: float,
-) -> float:
-    if not adaptive or anchor_vec is None:
-        return fixed_alpha
-    import numpy as np
-    q = np.asarray(query_vec)
-    a = np.asarray(anchor_vec)
-    q_n = q / (np.linalg.norm(q) + 1e-9)
-    a_n = a / (np.linalg.norm(a) + 1e-9)
-    consistency = float(max(0.0, min(1.0, float(np.dot(q_n, a_n)))))
-    return alpha_min + (alpha_max - alpha_min) * consistency
+    pcp_dir: Path | None = None,
+    consume: bool = True,
+) -> str:
+    """Return the hint text from the worker's pending-hint file.
+
+    Returns empty string if the file doesn't exist or its `thread_id`
+    field doesn't match the current thread (defensive: the worker only
+    ever writes its own thread's name, but we re-check to avoid cross-
+    thread contamination if a user manually copies files around).
+
+    When `consume=True` (default), deletes the file after reading so the
+    same hint is never injected twice.
+    """
+    path = _pending_hint_path(thread_id, pcp_dir)
+    if not path.is_file():
+        return ""
+    try:
+        payload = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        # Best-effort cleanup of a corrupt file so we don't keep
+        # bumping into it.
+        if consume:
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+        return ""
+    if payload.get("thread_id") != thread_id:
+        # Wrong thread — ignore, don't consume (defensive: another
+        # process may eventually read it).
+        return ""
+    hint = str(payload.get("hint_md") or "")
+    if consume:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+    return hint
 
 
+def launch_anchor_worker_async(
+    thread_id: str,
+    target_turn: int,
+    *,
+    session_id: str = "",
+    pcp_dir: Path | None = None,
+) -> None:
+    """Fire-and-forget Popen — same pattern as tinm_digest.launch_digest_async.
+
+    Pre-conditions:
+      • The hot path has ALREADY appended turn `target_turn` to the
+        thread file and written it back. The worker re-reads the file
+        under the PCP lock to grab the appended text.
+      • This function returns within ~5ms (Popen + start_new_session is
+        the only blocking step).
+
+    A missing `_anchor_worker.py` (e.g., partial install) silently
+    no-ops via the FileNotFoundError swallow — the user is not blocked,
+    the next session_start hook will re-install.
+    """
+    script = Path(__file__).parent / "_anchor_worker.py"
+    if not script.exists():
+        return
+    venv_py = Path.home() / ".tinm" / ".venv" / "bin" / "python"
+    py = str(venv_py) if venv_py.is_file() else sys.executable
+    pcp = pcp_dir if pcp_dir is not None else TINM_PCP_DIR
+    try:
+        subprocess.Popen(
+            [
+                py, str(script),
+                "--thread-id", thread_id,
+                "--pcp-dir", str(pcp),
+                "--session-id", session_id,
+                "--target-turn", str(target_turn),
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError:
+        # Spawn failure (e.g., no fork available) is non-fatal: the
+        # anchor stays unchanged this turn, the user is unblocked.
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Hot path: the function called by user_prompt.sh on EVERY user message.
+# Must NOT import sentence_transformers. Tests assert this.
+# ---------------------------------------------------------------------------
 def update_thread(
     thread_id: str,
     *,
     query: str,
     role: str = "user",
     client: str | None = None,
-    adaptive: bool = True,
-    alpha_min: float = 0.20,
-    alpha_max: float = 0.95,
-    fixed_alpha: float = 0.85,
     activation_min_turn: int = 3,
     emit_hint: bool = False,
+    session_id: str = "",
+    pcp_dir: Path | None = None,
+    dispatch_worker: bool = True,
 ) -> dict:
-    thread_path = THREADS_DIR / f"{thread_id}.json"
+    """Append turn, schedule async embedding, optionally return prior hint.
+
+    The current-turn embedding is NOT computed here — it happens in the
+    fire-and-forget worker. The hint returned (if `emit_hint=True`) is
+    whatever the previous turn's worker dropped; if no hint is pending,
+    the empty string is returned.
+    """
+    pcp = pcp_dir if pcp_dir is not None else TINM_PCP_DIR
+    thread_path = Path(pcp) / "threads" / f"{thread_id}.json"
     if not thread_path.exists():
         raise FileNotFoundError(
             f"Thread {thread_id!r} not found at {thread_path}. "
@@ -227,31 +324,10 @@ def update_thread(
         or _contains_anaphora(query)
     )
 
-    query_vec = _encode(query)
-    if len(query_vec) != EXPECTED_DIM:
-        raise RuntimeError(
-            f"Embedding dim mismatch: got {len(query_vec)}, expected {EXPECTED_DIM}"
-        )
-
     anchor = thread["anchor"]
-    anchor_vec = anchor.get("vector")
-    alpha_t = _compute_alpha(
-        query_vec, anchor_vec,
-        adaptive=adaptive, alpha_min=alpha_min, alpha_max=alpha_max,
-        fixed_alpha=fixed_alpha,
-    )
-    if anchor_vec is None:
-        new_vec = query_vec
-    else:
-        import numpy as np
-        a = np.asarray(anchor_vec)
-        q = np.asarray(query_vec)
-        new_vec = (alpha_t * a + (1.0 - alpha_t) * q).tolist()
-
-    anchor["vector"] = [float(x) for x in new_vec]
-    anchor["alpha_used"] = float(alpha_t)
-    anchor["update_count"] = int(anchor.get("update_count", 0)) + 1
-    anchor["last_updated_turn"] = next_turn
+    # NOTE: anchor.vector / alpha_used / update_count are NOT touched here
+    # — those are owned by the async worker (which re-reads under lock).
+    # Hot path only touches the cheap fields the hint formatter needs.
     anchor["engaged_so_far"] = bool(anchor.get("engaged_so_far") or is_l1_engaged)
 
     turn_entry = {
@@ -271,11 +347,135 @@ def update_thread(
         thread["metadata"]["client_history"] = ch
 
     thread["metadata"]["last_updated"] = _utcnow()
-
-    # Compute top query terms from full trajectory (including current turn)
     anchor["top_terms"] = _top_query_terms(thread["trajectory"])
 
-    # Format hint before write so we work from final state
+    # Consume any hint left by the prior turn's worker, BEFORE we write —
+    # so the same lock window covers append + hint-consume. The hint is
+    # only returned (not emitted) here; main() decides whether to print.
+    pending_hint = ""
+    if emit_hint:
+        pending_hint = read_pending_hint(thread_id, pcp_dir=pcp, consume=True)
+
+    with pcp_lock(pcp):
+        # Defensive: re-read under lock so we don't clobber an anchor
+        # vector update that the worker for turn N-1 may have just
+        # committed between our outside-the-lock read above and now.
+        try:
+            on_disk = json.loads(thread_path.read_text())
+            on_disk_anchor = on_disk.get("anchor", {})
+            # Preserve worker-owned fields (vector, alpha_used, update_count,
+            # last_async_update_ts) from disk; everything else is our
+            # in-memory version.
+            for k in ("vector", "alpha_used", "update_count", "last_async_update_ts"):
+                if k in on_disk_anchor:
+                    anchor[k] = on_disk_anchor[k]
+        except (json.JSONDecodeError, OSError):
+            pass
+        _atomic_write_json(thread_path, thread)
+
+    # Dispatch the worker AFTER the lock is released — Popen is cheap
+    # but the lock window should be as small as possible.
+    if dispatch_worker:
+        launch_anchor_worker_async(
+            thread_id, next_turn,
+            session_id=session_id, pcp_dir=pcp,
+        )
+
+    return {
+        "turn": next_turn,
+        "l1_engaged": is_l1_engaged,
+        "engaged_so_far": anchor["engaged_so_far"],
+        "anchor_update_count": int(anchor.get("update_count") or 0),
+        "hint_text": pending_hint,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Legacy SYNCHRONOUS path — only invoked when --legacy-sync is passed
+# (testing / debugging / CI parity checks). NEVER reachable on the hot
+# path. sentence_transformers is imported lazily here, and the runtime
+# test in test_tinm_update_async.py asserts that no top-level import of
+# sentence_transformers exists in this module.
+# ---------------------------------------------------------------------------
+def _sync_encode_fallback(text: str) -> list[float]:
+    """Synchronous embed — testing / debug only. NOT for hot path."""
+    # Lazy imports — never at module load.
+    from sentence_transformers import SentenceTransformer  # noqa: E402
+    import numpy as np  # noqa: E402
+    model = SentenceTransformer(EXPECTED_MODEL)
+    vec = model.encode(text, convert_to_numpy=True, show_progress_bar=False)
+    return [float(x) for x in np.asarray(vec).ravel()]
+
+
+def _update_thread_sync_legacy(
+    thread_id: str,
+    *,
+    query: str,
+    role: str = "user",
+    client: str | None = None,
+    activation_min_turn: int = 3,
+    emit_hint: bool = False,
+    adaptive: bool = True,
+    alpha_min: float = 0.20,
+    alpha_max: float = 0.95,
+    fixed_alpha: float = 0.85,
+) -> dict:
+    """Pre-v0.3.0 behavior — embed in-process, write everything atomically.
+
+    Kept for debugging parity tests + a `--legacy-sync` CLI escape hatch.
+    Slow (6-8s). Do not call from a hook.
+    """
+    import numpy as np  # noqa: E402
+
+    thread_path = THREADS_DIR / f"{thread_id}.json"
+    if not thread_path.exists():
+        raise FileNotFoundError(
+            f"Thread {thread_id!r} not found at {thread_path}. "
+            f"Run tinm_init.py first."
+        )
+
+    thread = json.loads(thread_path.read_text())
+    if thread["pcp_version"].split(".", 1)[0] != "0":
+        raise RuntimeError(f"Unsupported pcp_version {thread['pcp_version']!r}")
+    if thread["metadata"]["embedding_model"] != EXPECTED_MODEL:
+        raise RuntimeError("embedding model mismatch")
+
+    next_turn = len(thread["trajectory"]) + 1
+    is_l1_engaged = next_turn >= activation_min_turn or _contains_anaphora(query)
+
+    query_vec = _sync_encode_fallback(query)
+    if len(query_vec) != EXPECTED_DIM:
+        raise RuntimeError(f"dim mismatch got {len(query_vec)}")
+
+    anchor = thread["anchor"]
+    anchor_vec = anchor.get("vector")
+    if not adaptive or anchor_vec is None:
+        alpha_t = fixed_alpha
+    else:
+        q = np.asarray(query_vec)
+        a = np.asarray(anchor_vec)
+        q_n = q / (np.linalg.norm(q) + 1e-9)
+        a_n = a / (np.linalg.norm(a) + 1e-9)
+        consistency = float(max(0.0, min(1.0, float(np.dot(q_n, a_n)))))
+        alpha_t = alpha_min + (alpha_max - alpha_min) * consistency
+
+    new_vec = (
+        query_vec if anchor_vec is None
+        else (alpha_t * np.asarray(anchor_vec) + (1.0 - alpha_t) * np.asarray(query_vec)).tolist()
+    )
+    anchor["vector"] = [float(x) for x in new_vec]
+    anchor["alpha_used"] = float(alpha_t)
+    anchor["update_count"] = int(anchor.get("update_count", 0)) + 1
+    anchor["last_updated_turn"] = next_turn
+    anchor["engaged_so_far"] = bool(anchor.get("engaged_so_far") or is_l1_engaged)
+
+    turn_entry = {"turn": next_turn, "role": role, "text": query, "ts": _utcnow()}
+    if client:
+        turn_entry["client"] = client
+    thread["trajectory"].append(turn_entry)
+    thread["metadata"]["last_updated"] = _utcnow()
+    anchor["top_terms"] = _top_query_terms(thread["trajectory"])
+
     hint_text = _format_trajectory_hint(thread, next_turn) if emit_hint else ""
 
     with pcp_lock(TINM_PCP_DIR):
@@ -297,37 +497,54 @@ def main() -> None:
     parser.add_argument("--query", required=True)
     parser.add_argument("--role", default="user", choices=["user", "assistant"])
     parser.add_argument("--client", default=None)
+    parser.add_argument("--session-id", default="",
+                        help="Optional session id passed to the async worker (for logging).")
     parser.add_argument("--no-adaptive", action="store_true",
-                        help="Use fixed α instead of adaptive friction-based α.")
+                        help="(legacy-sync only) Use fixed α.")
     parser.add_argument("--emit-hint", action="store_true",
-                        help="Print trajectory hint to stdout for injection into Claude's context.")
+                        help="Print prior-turn pending hint (if any) to stdout.")
     parser.add_argument("--telemetry", default=None, metavar="HOOK_NAME",
                         help="If set, record latency_added_ms for the given hook (Lane H).")
+    parser.add_argument("--legacy-sync", action="store_true",
+                        help="Run the pre-v0.3.0 synchronous embed in-process. "
+                             "Slow (6-8s). Testing/debugging only.")
     args = parser.parse_args()
 
     ctx = measure_latency(args.telemetry) if args.telemetry else nullcontext()
     with ctx:
         try:
-            result = update_thread(
-                args.thread_id,
-                query=args.query,
-                role=args.role,
-                client=args.client,
-                adaptive=not args.no_adaptive,
-                emit_hint=args.emit_hint,
-            )
+            if args.legacy_sync:
+                result = _update_thread_sync_legacy(
+                    args.thread_id,
+                    query=args.query,
+                    role=args.role,
+                    client=args.client,
+                    emit_hint=args.emit_hint,
+                    adaptive=not args.no_adaptive,
+                )
+            else:
+                result = update_thread(
+                    args.thread_id,
+                    query=args.query,
+                    role=args.role,
+                    client=args.client,
+                    emit_hint=args.emit_hint,
+                    session_id=args.session_id,
+                )
         except (FileNotFoundError, RuntimeError) as e:
             print(f"error: {e}", file=sys.stderr)
             sys.exit(1)
 
         if args.emit_hint:
-            # In hint mode: print the hint (or nothing if L1 not engaged).
+            # In hint mode: print the hint (or nothing if none pending).
             # Never print stats — they would be injected into Claude's context.
             if result.get("hint_text"):
                 print(result["hint_text"])
         else:
+            alpha = result.get("alpha_used")
+            alpha_str = f"α={alpha:.3f}, " if isinstance(alpha, (int, float)) else ""
             print(
-                f"turn {result['turn']}: α={result['alpha_used']:.3f}, "
+                f"turn {result['turn']}: {alpha_str}"
                 f"L1_engaged={result['l1_engaged']}, "
                 f"engaged_so_far={result['engaged_so_far']}, "
                 f"anchor_updates={result['anchor_update_count']}"
