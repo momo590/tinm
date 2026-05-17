@@ -275,14 +275,23 @@ def classify_thread(
 
 
 def _set_origin_user(thread_data: dict, fingerprint: str | None) -> bool:
-    """Patch metadata.origin = 'user' + fingerprint. Returns True if dirty."""
+    """Patch metadata.origin = 'user' + fingerprint. Returns True if dirty.
+
+    The fingerprint check uses `not meta.get(...)` so a stored value of
+    `None` (legacy/partial backfill) is still overwritten when a real
+    fingerprint becomes computable — `"workspace_fingerprint" not in meta`
+    alone would skip those entries forever.
+    """
     meta = thread_data.setdefault("metadata", {})
     dirty = False
     if meta.get("origin") != "user":
         meta["origin"] = "user"
         dirty = True
-    if "workspace_fingerprint" not in meta:
+    if not meta.get("workspace_fingerprint") and fingerprint is not None:
         meta["workspace_fingerprint"] = fingerprint
+        dirty = True
+    elif "workspace_fingerprint" not in meta:
+        meta["workspace_fingerprint"] = None
         dirty = True
     if "workspace_bridges" not in meta:
         meta["workspace_bridges"] = []
