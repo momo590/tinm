@@ -319,6 +319,19 @@ def run_worker(
     return 0
 
 
+def _clear_pidfile(thread_id: str) -> None:
+    """Remove the single-flight pidfile written by launch_anchor_worker_async.
+
+    Best-effort: failures are swallowed (the next launch's stale-detection
+    will overwrite a leftover pidfile anyway).
+    """
+    try:
+        tinm_home = Path(os.environ.get("TINM_HOME", str(Path.home() / ".tinm")))
+        (tinm_home / f"anchor-worker-{thread_id}.pid").unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Async embedding worker for TINM anchor updates."
@@ -343,6 +356,8 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as e:
         _log_error("worker: fatal", e)
         return 0
+    finally:
+        _clear_pidfile(args.thread_id)
 
 
 if __name__ == "__main__":

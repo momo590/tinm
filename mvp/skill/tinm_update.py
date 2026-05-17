@@ -237,12 +237,17 @@ def launch_anchor_worker_async(
 ) -> None:
     """Fire-and-forget Popen — same pattern as tinm_digest.launch_digest_async.
 
-    Pre-conditions:
-      • The hot path has ALREADY appended turn `target_turn` to the
-        thread file and written it back. The worker re-reads the file
-        under the PCP lock to grab the appended text.
-      • This function returns within ~5ms (Popen + start_new_session is
-        the only blocking step).
+    Single-flight: at most one anchor worker per thread runs at a time.
+    Each worker loads sentence-transformers (~6s, ~600MB RAM); without
+    this guard, rapid successive prompts pile up workers and saturate
+    the system, regressing the hot path back into the seconds. A
+    skipped launch is functionally fine — the next turn's worker will
+    incorporate any intermediate turns (the worker re-reads the thread
+    file under pcp_lock and processes whatever trajectory exists at
+    that point).
+
+    The pidfile lives at $TINM_HOME/anchor-worker-<thread_id>.pid.
+    The worker is responsible for clearing it on exit (atexit-style).
 
     A missing `_anchor_worker.py` (e.g., partial install) silently
     no-ops via the FileNotFoundError swallow — the user is not blocked,
@@ -251,11 +256,34 @@ def launch_anchor_worker_async(
     script = Path(__file__).parent / "_anchor_worker.py"
     if not script.exists():
         return
+
+    # Single-flight pidfile check.
+    tinm_home = Path(os.environ.get("TINM_HOME", str(Path.home() / ".tinm")))
+    pidfile = tinm_home / f"anchor-worker-{thread_id}.pid"
+    if pidfile.is_file():
+        try:
+            existing_pid = int(pidfile.read_text().strip())
+            # /proc/<pid> exists iff the process is alive (Linux).
+            # On macOS /proc isn't there; fall back to os.kill(pid, 0).
+            alive = False
+            if Path(f"/proc/{existing_pid}").exists():
+                alive = True
+            else:
+                try:
+                    os.kill(existing_pid, 0)
+                    alive = True
+                except (ProcessLookupError, PermissionError):
+                    alive = False
+            if alive:
+                return  # another worker is already processing this thread
+        except (ValueError, OSError):
+            pass  # stale/corrupt pidfile — proceed to launch + overwrite
+
     venv_py = Path.home() / ".tinm" / ".venv" / "bin" / "python"
     py = str(venv_py) if venv_py.is_file() else sys.executable
     pcp = pcp_dir if pcp_dir is not None else TINM_PCP_DIR
     try:
-        subprocess.Popen(
+        proc = subprocess.Popen(
             [
                 py, str(script),
                 "--thread-id", thread_id,
@@ -268,6 +296,16 @@ def launch_anchor_worker_async(
             stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
+        # Write the pidfile immediately so the next turn's launch sees it.
+        # Worker clears it on exit; if the worker crashes before clearing,
+        # the next launch detects the dead pid and overwrites.
+        pid = getattr(proc, "pid", None)
+        if pid is not None:
+            try:
+                tinm_home.mkdir(parents=True, exist_ok=True)
+                pidfile.write_text(str(pid))
+            except OSError:
+                pass  # pidfile is best-effort
     except OSError:
         # Spawn failure (e.g., no fork available) is non-fatal: the
         # anchor stays unchanged this turn, the user is unblocked.

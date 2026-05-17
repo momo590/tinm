@@ -373,12 +373,17 @@ PYEOF
     TURN_ARG=()
     [ -n "$TURN_COUNT" ] && TURN_ARG=(--next-turn "$TURN_COUNT")
 
+    # v0.3.0: detach to background — score_and_flush calls tinm_artifact.cmd_add
+    # which lazy-loads sentence-transformers via tinm_scoring._encode().
+    # Synchronously this added ~5s to the hot path (p99). Same fire-and-forget
+    # pattern as push_throttle and _anchor_worker below. PCP writes are
+    # serialized by pcp_lock so concurrent runs don't race.
     "$VENV_PY" "$CAPTURE_SCRIPT" score_and_flush \
         --thread-id "$THREAD_ID" \
         --session-id "$SESSION_ID" \
         --prompt "$PROMPT_TEXT" \
         "${TURN_ARG[@]}" \
-        >/dev/null 2>>/tmp/tinm_hook.log || true
+        >/dev/null 2>>/tmp/tinm_hook.log &
 fi
 
 # Phase 2 sync (best-effort, background): if the PCP store is a git
