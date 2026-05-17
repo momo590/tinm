@@ -174,4 +174,14 @@ if [ -n "$SESSION_THREAD_FILE" ] && [ -f "$SESSION_THREAD_FILE" ]; then
     rm -f "$SESSION_THREAD_FILE" 2>/dev/null || true
 fi
 
+# Also clean up the per-session upgrade-notif marker + prompt counter
+# written by user_prompt.sh's mid-session upgrade check (F1b). They are
+# only meaningful within a single session — leaving them around would
+# silently suppress next session's notif (marker) or skew the interval
+# (counter).
+if [ -n "$SESSION_ID" ]; then
+    rm -f "$TINM_HOME/session-${SESSION_ID}.upgrade-shown" 2>/dev/null || true
+    rm -f "$TINM_HOME/session-${SESSION_ID}.prompt-count" 2>/dev/null || true
+fi
+
 exit 0

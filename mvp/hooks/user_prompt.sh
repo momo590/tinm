@@ -141,6 +141,90 @@ if printf '%s' "$_FIRST20" | grep -q '^upgrade' && [ "$_TRANSCRIPT_LINES" -lt 4 
 fi
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ── F1b: Mid-session upgrade notification ────────────────────────────────────
+# A new TINM version released DURING a long session would otherwise only be
+# surfaced at the user's NEXT session_start. Every N user prompts (N =
+# config update_notify_interval, default 20), re-check for an upgrade,
+# honoring the 24h network cache inside tinm_update_check.
+#
+# Suppression rules:
+#   - If ~/.tinm/session-<id>.upgrade-shown exists, the SessionStart notif
+#     (or a prior mid-session notif) already surfaced — do not duplicate.
+#   - If update_notify=false in config, skip entirely.
+#   - If update_notify_interval=0, skip entirely (disable mid-session).
+#
+# State kept per-session under $TINM_HOME (machine-local; stop.sh cleans up):
+#   session-<id>.prompt-count   — monotonically increasing prompt counter
+#   session-<id>.upgrade-shown  — marker file (touch) once notif emitted
+#
+# Cost when no check fires: 1 file read + 1 file write + 1 arithmetic — < 1ms.
+# Cost when check fires (every Nth prompt): an extra Python import + cache
+# read; the 24h cache means it almost never hits the network. The check runs
+# in foreground so the notif appears in this prompt's context, but is bounded
+# by a 3s timeout so a slow remote can never block the user.
+if [ -n "$SESSION_ID" ] && [ -x "$VENV_PY" ]; then
+    _COUNT_FILE="$TINM_HOME/session-${SESSION_ID}.prompt-count"
+    _MARKER_FILE="$TINM_HOME/session-${SESSION_ID}.upgrade-shown"
+
+    # Increment per-session prompt counter. Best-effort: a corrupt file
+    # resets the count to 1 (no notif on this turn, will resume on next).
+    _PROMPT_N=0
+    if [ -r "$_COUNT_FILE" ]; then
+        _PROMPT_N="$(tr -d '[:space:]' < "$_COUNT_FILE" 2>/dev/null || echo 0)"
+        case "$_PROMPT_N" in
+            ''|*[!0-9]*) _PROMPT_N=0 ;;
+        esac
+    fi
+    _PROMPT_N=$((_PROMPT_N + 1))
+    printf '%s\n' "$_PROMPT_N" > "$_COUNT_FILE" 2>/dev/null || true
+
+    if [ ! -e "$_MARKER_FILE" ]; then
+        _UPGRADE_NOTIF="$(MARKER="$_MARKER_FILE" PROMPT_N="$_PROMPT_N" \
+            timeout 3s "$VENV_PY" - << 'PYEOF' 2>/dev/null || true
+import os, sys, pathlib
+sys.path.insert(0, str(pathlib.Path.home() / ".claude" / "skills" / "tinm"))
+try:
+    from tinm_config import get_config
+    from tinm_update_check import check_for_update
+    cfg = get_config()
+    if not cfg.get("update_notify", True):
+        sys.exit(0)
+    interval = int(cfg.get("update_notify_interval", 20) or 0)
+    if interval <= 0:
+        sys.exit(0)
+    try:
+        n = int(os.environ.get("PROMPT_N", "0"))
+    except ValueError:
+        n = 0
+    # Fire only on the Nth, 2Nth, 3Nth... prompt of the session.
+    if n < interval or (n % interval) != 0:
+        sys.exit(0)
+    r = check_for_update()
+    if not r.get("has_update"):
+        sys.exit(0)
+    latest = r.get("latest") or "?"
+    print(
+        f"\U0001f4a1 TINM v{latest} available — respond 'upgrade' at the start of your next message to install automatically."
+    )
+    marker = os.environ.get("MARKER", "")
+    if marker:
+        try:
+            p = pathlib.Path(marker)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.touch()
+        except OSError:
+            pass
+except Exception:
+    pass
+PYEOF
+)"
+        if [ -n "$_UPGRADE_NOTIF" ]; then
+            printf '%s\n' "$_UPGRADE_NOTIF"
+        fi
+    fi
+fi
+# ─────────────────────────────────────────────────────────────────────────────
+
 # ── F3: L1 activation threshold ─────────────────────────────────────────────
 # Skip expensive hint-emission on very short sessions unless anaphora is
 # detected. Saves ~150ms on turns 1-2.

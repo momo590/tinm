@@ -101,14 +101,44 @@ if [ -d "$TINM_PCP_DIR/.git" ]; then
     } >> "$_SYNC_LOG" 2>&1 || true
 fi
 
+# Extract session_id from the JSON payload BEFORE F1 so that the upgrade
+# notification can write a per-session "already shown" marker — which
+# user_prompt.sh reads to suppress duplicate mid-session notifications.
+#
+# If session_id is absent (manual hook test or pre-spec Claude Code
+# build), we fall back to the hook PID for SESSION_KEY. The fallback is
+# intentionally fragile: user_prompt.sh will receive a real session_id
+# and look for a different file, which means the legacy current_thread
+# fallback in user_prompt.sh kicks in. That's the safe path — never
+# break a session over a missing session_id.
+SESSION_ID=""
+if [ -n "$PAYLOAD_JSON" ] && [ -x "$VENV_PY" ]; then
+    SESSION_ID="$(printf '%s' "$PAYLOAD_JSON" | "$VENV_PY" -c \
+        'import json, sys
+try:
+    print(json.load(sys.stdin).get("session_id", ""), end="")
+except Exception:
+    pass' 2>/dev/null)"
+fi
+SESSION_KEY="${SESSION_ID:-$$}"
+SESSION_THREAD_FILE="$TINM_HOME/session-${SESSION_KEY}.thread"
+# Per-session marker that the upgrade notif has been surfaced. Created
+# by F1 below (SessionStart side) OR by user_prompt.sh (mid-session
+# side); whichever fires first wins. Removed by stop.sh.
+SESSION_UPGRADE_MARKER="$TINM_HOME/session-${SESSION_KEY}.upgrade-shown"
+
 # F1: Upgrade notification (best-effort, 24h cached, 3s timeout, silent on error).
 # Emits a single line to stdout (injected into Claude's context by Claude Code).
 # Format: 💡 TINM vX.Y.Z available — respond 'upgrade' at the start of your
 #         next message to install automatically.
 # Controlled by ~/.tinm/config.json:update_notify (default true) and
 # auto_upgrade (default false).
+#
+# On emit, we also touch the per-session marker so user_prompt.sh's
+# mid-session L1 check suppresses a duplicate notif this session.
 if [ -x "$VENV_PY" ]; then
-    timeout 3s "$VENV_PY" - << 'PYEOF' 2>/dev/null || true
+    _UPGRADE_OUTPUT="$(SESSION_UPGRADE_MARKER="$SESSION_UPGRADE_MARKER" \
+        timeout 3s "$VENV_PY" - << 'PYEOF' 2>/dev/null || true
 import os, sys, pathlib, subprocess
 sys.path.insert(0, str(pathlib.Path.home() / ".claude" / "skills" / "tinm"))
 try:
@@ -135,9 +165,24 @@ try:
         print(
             f"\U0001f4a1 TINM v{latest} available — respond 'upgrade' at the start of your next message to install automatically."
         )
+    # Drop a marker so user_prompt.sh's mid-session L1 check does not
+    # re-emit the same notif within this session. Best-effort: write
+    # failure must not block the rest of the hook.
+    marker = os.environ.get("SESSION_UPGRADE_MARKER", "")
+    if marker:
+        try:
+            p = pathlib.Path(marker)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.touch()
+        except OSError:
+            pass
 except Exception:
     pass
 PYEOF
+)"
+    if [ -n "$_UPGRADE_OUTPUT" ]; then
+        printf '%s\n' "$_UPGRADE_OUTPUT"
+    fi
 fi
 
 # ── DEC-2: Resolve the thread ONCE for this cwd, freeze it ───────────────
@@ -146,24 +191,6 @@ fi
 if [ ! -x "$VENV_PY" ] || [ ! -r "$PROVENANCE_SCRIPT" ]; then
     exit 0
 fi
-
-# Extract session_id from the JSON payload. If absent (manual hook test
-# or pre-spec Claude Code build), fall back to the hook PID. The
-# fallback is intentionally fragile: user_prompt.sh will receive a real
-# session_id and look for a different file, which means the legacy
-# current_thread fallback in user_prompt.sh kicks in. That's the safe
-# path — never break a session over a missing session_id.
-SESSION_ID=""
-if [ -n "$PAYLOAD_JSON" ]; then
-    SESSION_ID="$(printf '%s' "$PAYLOAD_JSON" | "$VENV_PY" -c \
-        'import json, sys
-try:
-    print(json.load(sys.stdin).get("session_id", ""), end="")
-except Exception:
-    pass' 2>/dev/null)"
-fi
-SESSION_KEY="${SESSION_ID:-$$}"
-SESSION_THREAD_FILE="$TINM_HOME/session-${SESSION_KEY}.thread"
 
 # Resolve thread for cwd via the single source of truth.
 # Stdout = thread_id (or empty on failure); exit 1 means "no thread".

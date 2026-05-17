@@ -29,6 +29,12 @@ CONFIG_FILE = Path.home() / ".tinm" / "config.json"
 DEFAULTS: dict[str, Any] = {
     "update_notify": True,
     "auto_upgrade": False,
+    # L1 mid-session upgrade notification — how many user prompts between
+    # checks. The check itself is cheap (24h cache in tinm_update_check),
+    # but we throttle the trigger so the notif does not re-appear every
+    # turn after the SessionStart notif fires. Set to 0 to disable
+    # mid-session checks entirely.
+    "update_notify_interval": 20,
 }
 
 
