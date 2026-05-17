@@ -104,10 +104,10 @@ macOS and Linux. Disable anytime: `tinm_clipboard.py --disable`. Full docs in [`
 ## How it works
 
 - **Three hooks.** Claude Code fires `SessionStart`, `UserPromptSubmit`, and `Stop` events as you work. TINM listens to all three.
-- **At session start**, TINM loads your most relevant past notes into Claude's context. Recent decisions, named files, answers you approved — they're back.
-- **On every prompt**, TINM scores your message against everything it remembers and surfaces the matches into context, automatically.
+- **At session start**, TINM resolves the thread for your current working directory (one per project, derived from the git toplevel or basename), freezes that name for the session, and loads the relevant past notes into Claude's context.
+- **On every prompt**, TINM scores your message against everything it remembers and surfaces the matches into context, automatically. `cd`'ing mid-session does NOT switch threads — the per-session freeze guarantees one logical conversation stays in one thread.
 - **At session end**, TINM captures the answers you implicitly approved (by moving on without correction) — so next session knows what you agreed on, not just what you asked.
-- **Storage.** Everything lives in `~/.tinm/` as plain JSON files. Open them in any text editor. Nothing leaves your machine.
+- **Storage.** Everything lives in `~/.tinm/pcp/` as plain JSON files — `threads/` for your work, `seeds/` for bundled demo data (read-only, separately namespaced so private work cannot accidentally pile onto a public seed). Open them in any text editor. Nothing leaves your machine.
 
 ## Research
 
@@ -128,6 +128,7 @@ Adapters ship for Cursor, OpenClaw, Windsurf, Cline, Aider, Codex CLI, and Conti
 
 ## Status
 
+- **v0.2.3** — per-cwd thread isolation, seed namespace separation, workspace-provenance gate. Upgrade-time migration splits any threads polluted by the v0.2.2 seed-vs-current_thread bug. See [`MIGRATION_v023.md`](MIGRATION_v023.md).
 - **v0.2.2** — cross-session memory, intra-session relevance scoring, 8 vendor adapters. Stable on macOS and Linux.
 - **Next** — handoff-prompt generator (compose the perfect prompt for the next agent/machine), telemetry-tuned scoring weights.
 

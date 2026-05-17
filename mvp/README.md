@@ -225,10 +225,11 @@ echo '{"prompt": "test prompt", "session_id": "x"}' \
 
 If (a) fails → venv or deps issue (re-run Step 1).
 If (b) fails → import path issue in `tinm_server.py`.
-If (c) emits nothing → `~/.tinm/current_thread` is empty or missing.
-   Fix: run `/tinm init <slug> --title "..."` once, which creates the
-   marker and writes the thread file. Or set the marker by hand:
-   `echo my-thread > ~/.tinm/current_thread`.
+If (c) emits nothing → no thread resolved for this cwd. Under v0.2.3
+   the SessionStart hook auto-creates a thread from the cwd (git
+   toplevel basename inside a repo, `<basename>-<short-sha>` outside),
+   so this should be rare. Inspect `~/.tinm/hook-warn-<host>.log` for
+   reasons. To force a specific thread, `/tinm init <slug>` once.
 If (d) errors → `~/.claude/skills/tinm` is not a symlink (you `cp -r`'d
    the folder instead). Re-run Step 2.
 
@@ -236,23 +237,28 @@ If (d) errors → `~/.claude/skills/tinm` is not a symlink (you `cp -r`'d
 
 ```
 $TINM_HOME/                       # default ~/.tinm — machine-local
-├── current_thread                # one-line marker — the slug of the thread
-│                                 #   the SessionStart hook will load (per-host)
+├── session-<id>.thread           # per-session frozen thread name (v0.2.3+);
+│                                 #   written by SessionStart, deleted by Stop.
 ├── .venv/                        # Python venv (sentence-transformers, mcp, ...)
 │                                 #   arch-specific, NEVER sync across hosts
+├── hook-warn-<host>.log          # per-host hook diagnostics (gate refusals, etc.)
 └── pcp/                          # = $TINM_PCP_DIR; default $TINM_HOME/pcp.
     │                             #   SAFE to point at a synced folder
     │                             #   (Syncthing / iCloud / Tailscale Drive).
     ├── threads/
-    │   └── <thread_id>.json      # trajectory + anchor + metadata
-    └── artifacts/
-        └── <thread_id>.json      # named artifacts (L4)
+    │   └── <thread_id>.json      # user threads — trajectory + anchor + metadata
+    ├── artifacts/
+    │   └── <thread_id>.json      # named artifacts (L4)
+    └── seeds/                    # v0.2.3+: bundled demo seeds (read-only).
+        ├── <seed_id>.json
+        └── <seed_id>.artifacts.json
 ```
 
 The split is the single load-bearing design decision for cross-machine
-sync: only `$TINM_PCP_DIR` needs to be shared, while `current_thread`
-(per-host session marker) and `.venv/` (architecture-specific Python
-deps) must stay local.
+sync: only `$TINM_PCP_DIR` needs to be shared, while per-session
+handoff files and `.venv/` (architecture-specific Python deps) must
+stay local. v0.2.3 retired the legacy `current_thread` global pointer
+— see [`../MIGRATION_v023.md`](../MIGRATION_v023.md).
 
 Override either path via env (e.g. in `~/.zshrc`):
 

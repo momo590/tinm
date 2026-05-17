@@ -21,14 +21,17 @@ write semantics, signed updates).
 
 ## 1. File layout
 
-Per user, two files per work *thread*:
+Per user, three top-level directories under the PCP store:
 
 ```
-~/.tinm/
+~/.tinm/pcp/
 ├── threads/
-│   └── <thread_id>.json         # the trajectory + anchor (Section 2)
-└── artifacts/
-    └── <thread_id>.json         # the L4 conversation-index (Section 3)
+│   └── <thread_id>.json         # user threads — trajectory + anchor (Section 2)
+├── artifacts/
+│   └── <thread_id>.json         # L4 conversation-index (Section 3)
+└── seeds/                       # v0.2.3+: bundled demo seeds (read-only)
+    ├── <seed_id>.json
+    └── <seed_id>.artifacts.json
 ```
 
 Split rationale: the trajectory file is the hot path — every user turn
@@ -36,6 +39,13 @@ appends ~1 entry, every PCP-aware skill reads it on session start. The
 artifact index is colder, larger, and only consulted when the LLM
 needs to resolve "the X we did earlier". Splitting avoids re-writing a
 500-KB artifact list on every turn.
+
+**Seeds namespace (v0.2.3).** Bundled demo data lives in `pcp/seeds/`
+with `metadata.origin = "seed"`. Hooks refuse writes to seed threads
+(see Section 2.4) — to keep a seed's content, the user must fork it
+into `pcp/threads/`. The seeds namespace exists to prevent the
+v0.2.2-era bug where seed install set `current_thread` and weeks of
+private user work silently accumulated on top of a public demo seed.
 
 `thread_id` is a user-chosen slug (lowercase, hyphens, no spaces). It
 is the cross-vendor stable identifier. A skill instantiates one
@@ -60,7 +70,10 @@ Claude Code today, Claude.ai tomorrow, and ChatGPT on the train.
     "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
     "embedding_dim": 384,
     "project_root": "/Users/user/TNIM",
-    "client_history": ["claude-code"]
+    "client_history": ["claude-code"],
+    "origin": "user",
+    "workspace_fingerprint": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+    "workspace_bridges": []
   },
   "anchor": {
     "vector": [0.123, -0.045, 0.067, "…"],
@@ -95,6 +108,9 @@ Claude Code today, Claude.ai tomorrow, and ChatGPT on the train.
 | `metadata.embedding_dim` | int | yes | Must equal `len(anchor.vector)` when anchor is initialised. |
 | `metadata.project_root` | absolute path | optional | Hint for clients that want to scope to a project. |
 | `metadata.client_history` | list[string] | optional | Names of clients that have written to this thread. Appended once on first write per client. |
+| `metadata.origin` | enum | v0.2.3+ | One of `"user"`, `"seed"`, `"imported"`. Hooks refuse writes when `"seed"`. Legacy threads without this field are treated as `"user"` (the v0.2.3 migration backfills). |
+| `metadata.workspace_fingerprint` | string \| null | v0.2.3+ | `"sha256:<32 hex>"` — hash of the cwd realpath this thread was created from. Set on creation, immutable. Hooks compare the runtime cwd's fingerprint against this value to gate writes. Legacy threads have `null` here and remain writable. |
+| `metadata.workspace_bridges` | list[string] | v0.2.3+ | Explicit cross-host bridges added via `tinm thread bridge`. Each entry is a `"sha256:..."` fingerprint that should also be allowed to write to this thread (e.g., the same project at a different path on another host). |
 | `anchor.vector` | list[float] OR null | yes | `null` until first turn writes; thereafter length `= embedding_dim`. |
 | `anchor.alpha_used` | float in (0, 1] | yes | The α applied at the last update. Fixed (`0.85`) or adaptive. |
 | `anchor.update_count` | int ≥ 0 | yes | Number of EMA updates applied so far. |
@@ -118,6 +134,35 @@ Claude Code today, Claude.ai tomorrow, and ChatGPT on the train.
   `anchor.vector` as opaque (read but do not blend with a freshly
   computed query embedding); the LLM context can still benefit from
   the trajectory text and the title even if the anchor is dropped.
+
+### 2.4 Provenance gate (v0.2.3+)
+
+Before any write to a thread file, a client SHOULD call
+`check_thread_writable(thread, cwd_fingerprint)` and refuse the write
+when it returns `(False, reason)`. The gate enforces:
+
+1. **Seed protection.** `metadata.origin == "seed"` always refuses;
+   the user must fork the seed to derive a writable thread.
+2. **Workspace match.** When `workspace_fingerprint` is set, the
+   current cwd's fingerprint MUST equal it OR appear in
+   `workspace_bridges`.
+3. **Legacy permissive.** When `workspace_fingerprint` is absent (a
+   pre-v0.2.3 thread), the gate allows writes — the v0.2.3 migration
+   backfills these or tags the thread `origin: "user"` cleanly.
+
+A user opting in to writes from a second workspace (e.g., the same
+project on a laptop and a server) bridges explicitly:
+
+```
+tinm thread bridge <slug>                       # bridge $PWD's fingerprint
+tinm thread bridge <slug> --add-workspace PATH  # bridge a specific path
+tinm thread bridge <slug> --list                # show canonical + bridges
+```
+
+The freeze invariant: a hook resolves the thread for a session ONCE
+at SessionStart and persists the name to `${TINM_HOME}/session-<id>.thread`.
+Subsequent prompt/stop hooks read that file instead of re-resolving
+from cwd. `cd`'ing mid-session does NOT switch threads.
 
 ---
 
