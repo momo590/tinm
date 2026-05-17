@@ -7,6 +7,19 @@
 # payload on stdin. stdout is injected as additional context before
 # Claude processes the current message — we use it to deliver the
 # TINM queries-only trajectory hint.
+#
+# ── v0.2.3 thread-isolation (DEC-2 freeze-at-start) ──────────────────────
+# THREAD_ID is read from the per-session handoff file written by
+# session_start.sh — keyed by the session_id Claude Code passes in the
+# JSON payload. We do NOT re-resolve from cwd here: cd'ing mid-session
+# must not switch threads (DEC-2).
+#
+# Fallback: if the handoff file is missing (parallel CC instances,
+# pre-v0.2.3 SessionStart hook on the peer host, hook ordering race),
+# read the legacy ~/.tinm/current_thread file so v0.2.2 installs mid-
+# migration do not break. Log one warning line per fallback to the
+# per-host hook-warn log.
+# ─────────────────────────────────────────────────────────────────────────
 
 set -e
 
@@ -19,22 +32,22 @@ echo "[$(date -u +%FT%TZ)] hook fired" >> /tmp/tinm_hook.log
 
 # TINM paths — honor TINM_HOME / TINM_PCP_DIR for Phase 2 multi-host
 # setups (e.g. Mac<->Linux via Syncthing-over-Tailscale). Defaults match the
-# Phase 1 single-host layout. current_thread + venv stay under TINM_HOME
+# Phase 1 single-host layout. session handoff + venv stay under TINM_HOME
 # (machine-local); the PCP store goes under TINM_PCP_DIR.
 TINM_HOME="${TINM_HOME:-$HOME/.tinm}"
 TINM_PCP_DIR="${TINM_PCP_DIR:-$TINM_HOME/pcp}"
 export TINM_HOME TINM_PCP_DIR
 
-CURRENT_FILE="$TINM_HOME/current_thread"
 VENV_PY="$TINM_HOME/.venv/bin/python"
-UPDATE_SCRIPT="$HOME/.claude/skills/tinm/tinm_update.py"
-PUSH_THROTTLE_SCRIPT="$HOME/.claude/skills/tinm/push_throttle.py"
-CAPTURE_SCRIPT="$HOME/.claude/skills/tinm/tinm_assistant_capture.py"
+SKILL_DIR="$HOME/.claude/skills/tinm"
+UPDATE_SCRIPT="$SKILL_DIR/tinm_update.py"
+PUSH_THROTTLE_SCRIPT="$SKILL_DIR/push_throttle.py"
+CAPTURE_SCRIPT="$SKILL_DIR/tinm_assistant_capture.py"
 
-# No current thread → nothing to do.
-[ -r "$CURRENT_FILE" ] || exit 0
-THREAD_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
-[ -n "$THREAD_ID" ] || exit 0
+# Legacy current_thread fallback path (read-only fallback only —
+# user_prompt.sh never writes to it under v0.2.3).
+LEGACY_CURRENT_FILE="$TINM_HOME/current_thread"
+HOOK_WARN_LOG="$TINM_HOME/hook-warn-$(hostname | tr '.' '-').log"
 
 # Venv guard — see session_start.sh for the same rationale.
 [ -x "$VENV_PY" ] || exit 0
@@ -59,6 +72,33 @@ SESSION_ID="$(printf '%s' "$PROMPT_JSON" | "$VENV_PY" -c \
     'import json, sys; print(json.load(sys.stdin).get("session_id", ""), end="")' \
     2>/dev/null)"
 
+# ── DEC-2: read frozen thread name from per-session handoff file ─────────
+THREAD_ID=""
+if [ -n "$SESSION_ID" ]; then
+    SESSION_THREAD_FILE="$TINM_HOME/session-${SESSION_ID}.thread"
+    if [ -r "$SESSION_THREAD_FILE" ]; then
+        THREAD_ID="$(tr -d '[:space:]' < "$SESSION_THREAD_FILE")"
+    fi
+fi
+
+if [ -z "$THREAD_ID" ]; then
+    # Fallback: legacy global current_thread (v0.2.2 backwards compat).
+    # Log one line so we can detect peer hosts that have not yet
+    # upgraded SessionStart to v0.2.3.
+    if [ -r "$LEGACY_CURRENT_FILE" ]; then
+        THREAD_ID="$(tr -d '[:space:]' < "$LEGACY_CURRENT_FILE")"
+        if [ -n "$THREAD_ID" ]; then
+            _TS="$(date -u +%FT%TZ)"
+            printf '%s user_prompt fell back to legacy current_thread (session_id=%s thread=%s)\n' \
+                "$_TS" "${SESSION_ID:-<missing>}" "$THREAD_ID" \
+                >> "$HOOK_WARN_LOG" 2>/dev/null || true
+        fi
+    fi
+fi
+
+# No thread → nothing to do.
+[ -n "$THREAD_ID" ] || exit 0
+
 # Compute transcript line count once — reused by F1, F3, and F7.
 _TRANSCRIPT_LINES=0
 if [ -r "$TRANSCRIPT_PATH" ]; then
@@ -76,7 +116,7 @@ fi
 # around arbitrary user prompt content. Best-effort: || true ensures the hook
 # never fails due to a conv_index error. TURN_N is the number of transcript
 # lines at this point, used as a monotonically increasing turn counter.
-CONV_ADD_SCRIPT="$HOME/.claude/skills/tinm/tinm_conv_add.py"
+CONV_ADD_SCRIPT="$SKILL_DIR/tinm_conv_add.py"
 if [ -n "$SESSION_ID" ] && [ -n "$PROMPT_TEXT" ] && [ -x "$VENV_PY" ] && [ -r "$CONV_ADD_SCRIPT" ]; then
     printf '%s' "$PROMPT_TEXT" | \
         "$VENV_PY" "$CONV_ADD_SCRIPT" "$SESSION_ID" "$_TRANSCRIPT_LINES" "user" \
@@ -90,7 +130,7 @@ fi
 # tinm_upgrade.py in the background and emit an acknowledgement to stdout so
 # Claude surfaces it. This is checked BEFORE the L1 threshold to ensure it is
 # never suppressed by the skip-find gate.
-UPGRADE_SCRIPT="$HOME/.claude/skills/tinm/tinm_upgrade.py"
+UPGRADE_SCRIPT="$SKILL_DIR/tinm_upgrade.py"
 _FIRST20="$(printf '%s' "$PROMPT_TEXT" | tr '[:upper:]' '[:lower:]' | cut -c1-20 | tr -d ' \t\n')"
 if printf '%s' "$_FIRST20" | grep -q '^upgrade' && [ "$_TRANSCRIPT_LINES" -lt 4 ]; then
     if [ -r "$UPGRADE_SCRIPT" ] && [ -x "$VENV_PY" ]; then
@@ -122,12 +162,12 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── F7: Digest injection + async trigger ────────────────────────────────────
-DIGEST_SCRIPT="$HOME/.claude/skills/tinm/tinm_digest.py"
-COMPACTION_SCRIPT="$HOME/.claude/skills/tinm/tinm_compaction_detect.py"
+DIGEST_SCRIPT="$SKILL_DIR/tinm_digest.py"
+COMPACTION_SCRIPT="$SKILL_DIR/tinm_compaction_detect.py"
 
 if [ -r "$DIGEST_SCRIPT" ] && [ -x "$VENV_PY" ] && [ -n "$SESSION_ID" ]; then
     # Build a small inline Python runner for both compaction detect + digest ops.
-    _DIGEST_OUT="$(SKILL_DIR="$HOME/.claude/skills/tinm" \
+    _DIGEST_OUT="$(SKILL_DIR="$SKILL_DIR" \
         "$VENV_PY" - "$SESSION_ID" "$THREAD_ID" "$TRANSCRIPT_PATH" "$_TURN_COUNT" \
         2>>/tmp/tinm_hook.log << 'PYEOF'
 import sys, os
@@ -203,7 +243,7 @@ if [ -r "$CAPTURE_SCRIPT" ] && [ -n "$SESSION_ID" ]; then
     # Read trajectory length (= current user turn count) AFTER the update
     # above. This becomes `next_user_turn` for the buffered assistant
     # response — the precise turn that scored it.
-    TURN_COUNT="$(SKILL_DIR="$HOME/.claude/skills/tinm" \
+    TURN_COUNT="$(SKILL_DIR="$SKILL_DIR" \
         "$VENV_PY" - "$THREAD_ID" 2>>/tmp/tinm_hook.log << 'PYEOF'
 import json, os, sys
 from pathlib import Path

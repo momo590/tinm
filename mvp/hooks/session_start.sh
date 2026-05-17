@@ -5,24 +5,59 @@
 # Stdout from a SessionStart hook is added to Claude's context (per
 # https://code.claude.com/docs/en/hooks). We use that to surface the
 # trajectory + artifacts so Claude has the user's prior work in mind from
-# turn 1 onwards. If no current thread is set, we exit quietly so the
-# session is unchanged.
+# turn 1 onwards. If no thread can be resolved for this cwd, we exit
+# quietly so the session is unchanged.
+#
+# ── v0.2.3 thread-isolation (DEC-2 freeze-at-start) ──────────────────────
+# Per the design (design-thread-isolation-2026-05-17.md), the thread for a
+# session is RESOLVED ONCE at SessionStart from $PWD via
+# tinm_provenance.resolve_thread_for_cwd, then FROZEN for the rest of the
+# session. cd'ing mid-session must NOT switch threads.
+#
+# Cross-process channel: a per-session file at
+#   ${TINM_HOME}/session-<session_id>.thread
+# holds the resolved thread name so user_prompt.sh and stop.sh — which
+# run in independent shell invocations — can read it without re-resolving.
+# Stop.sh deletes this file when the session ends so the directory does
+# not accumulate stale handoffs.
+#
+# Choice rationale (per-session FILE vs hook env passing): Claude Code
+# does not propagate env vars between separate hook invocations — each
+# hook runs in its own bash process. A file keyed by the session_id
+# (which Claude Code does provide in every hook's stdin JSON payload)
+# is the only reliable cross-hook channel. Files also survive a Claude
+# Code crash mid-session well enough for the next session to clean up.
+# ─────────────────────────────────────────────────────────────────────────
 
 set -e
+
+# Read stdin once — Claude Code passes session_id + transcript_path JSON
+# even to SessionStart. We need session_id to key the per-session
+# handoff file. Missing-stdin (manual hook test) → empty payload, we
+# fall back to $$ below.
+PAYLOAD_JSON=""
+if [ ! -t 0 ]; then
+    PAYLOAD_JSON="$(cat)"
+fi
 
 # TINM paths — honor TINM_HOME / TINM_PCP_DIR for Phase 2 multi-host
 # setups (e.g. Mac<->Linux via Syncthing-over-Tailscale, or any two
 # POSIX hosts sharing a remote). Defaults match the Phase 1 single-host
-# layout. current_thread + venv stay under TINM_HOME (machine-local);
+# layout. session handoff files + venv stay under TINM_HOME (machine-local);
 # the PCP store goes under TINM_PCP_DIR.
 TINM_HOME="${TINM_HOME:-$HOME/.tinm}"
 TINM_PCP_DIR="${TINM_PCP_DIR:-$TINM_HOME/pcp}"
 export TINM_HOME TINM_PCP_DIR
 
-CURRENT_FILE="$TINM_HOME/current_thread"
 VENV_PY="$TINM_HOME/.venv/bin/python"
-LOAD_SCRIPT="$HOME/.claude/skills/tinm/tinm_load.py"
-AUTO_INIT_SCRIPT="$HOME/.claude/skills/tinm/tinm_auto_init.py"
+SKILL_DIR="$HOME/.claude/skills/tinm"
+LOAD_SCRIPT="$SKILL_DIR/tinm_load.py"
+AUTO_INIT_SCRIPT="$SKILL_DIR/tinm_auto_init.py"
+PROVENANCE_SCRIPT="$SKILL_DIR/tinm_provenance.py"
+
+# Per-host hook warning log — used for provenance gate refusals + other
+# diagnostic chatter that we deliberately keep out of Claude's context.
+HOOK_WARN_LOG="$TINM_HOME/hook-warn-$(hostname | tr '.' '-').log"
 
 # Phase 2 sync (best-effort, v0.2.2): if the PCP store is a git repo, pull
 # the latest snapshot from the remote so this host's session starts with the
@@ -105,46 +140,100 @@ except Exception:
 PYEOF
 fi
 
-# Auto-init: if no current thread on this host but we are inside a git
-# repo, derive a slug from the repo's basename and create / select a
-# thread silently. Lets the user skip `/tinm init` entirely on new
-# projects. No-op if current_thread is already set, or if we are not in
-# a git repo. Stderr is dropped so any diagnostic chatter does not leak
-# into Claude's context.
-if [ -x "$VENV_PY" ] && [ -r "$AUTO_INIT_SCRIPT" ]; then
-    "$VENV_PY" "$AUTO_INIT_SCRIPT" 2>/dev/null || true
+# ── DEC-2: Resolve the thread ONCE for this cwd, freeze it ───────────────
+# Venv must be installed before we can call provenance. Fail silently if
+# not yet provisioned — the user is mid-install.
+if [ ! -x "$VENV_PY" ] || [ ! -r "$PROVENANCE_SCRIPT" ]; then
+    exit 0
 fi
 
-# Clipboard watcher auto-start (opt-in via ~/.tinm/clipboard_enabled flag).
-# Detached background daemon — survives this hook's exit. No-op if not
-# opted in or already running. Privacy: the trigger phrase requirement
-# means clipboard content is never captured without explicit user intent.
-CLIPBOARD_SCRIPT="$HOME/.claude/skills/tinm/tinm_clipboard.py"
-if [ -x "$VENV_PY" ] && [ -r "$CLIPBOARD_SCRIPT" ] && [ -f "$TINM_HOME/clipboard_enabled" ]; then
-    "$VENV_PY" "$CLIPBOARD_SCRIPT" --ensure-daemon 2>/dev/null || true
+# Extract session_id from the JSON payload. If absent (manual hook test
+# or pre-spec Claude Code build), fall back to the hook PID. The
+# fallback is intentionally fragile: user_prompt.sh will receive a real
+# session_id and look for a different file, which means the legacy
+# current_thread fallback in user_prompt.sh kicks in. That's the safe
+# path — never break a session over a missing session_id.
+SESSION_ID=""
+if [ -n "$PAYLOAD_JSON" ]; then
+    SESSION_ID="$(printf '%s' "$PAYLOAD_JSON" | "$VENV_PY" -c \
+        'import json, sys
+try:
+    print(json.load(sys.stdin).get("session_id", ""), end="")
+except Exception:
+    pass' 2>/dev/null)"
+fi
+SESSION_KEY="${SESSION_ID:-$$}"
+SESSION_THREAD_FILE="$TINM_HOME/session-${SESSION_KEY}.thread"
+
+# Resolve thread for cwd via the single source of truth.
+# Stdout = thread_id (or empty on failure); exit 1 means "no thread".
+TINM_SESSION_THREAD="$( cd "$PWD" && SKILL_DIR="$SKILL_DIR" \
+    "$VENV_PY" -c "
+import os, sys
+sys.path.insert(0, os.environ['SKILL_DIR'])
+from tinm_provenance import resolve_thread_for_cwd
+r = resolve_thread_for_cwd(os.getcwd())
+if r:
+    print(r, end='')
+" 2>>"$HOOK_WARN_LOG" )"
+
+if [ -z "$TINM_SESSION_THREAD" ]; then
+    # No thread for this cwd — exit cleanly. Note: do NOT touch
+    # current_thread; under v0.2.3 it is being phased out. The legacy
+    # global pointer remains untouched so v0.2.2 installs in the middle
+    # of upgrading do not regress.
+    exit 0
 fi
 
-# No current thread → nothing to inject, exit cleanly so Claude Code does
-# not show an error.
-[ -r "$CURRENT_FILE" ] || exit 0
-THREAD_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
-[ -n "$THREAD_ID" ] || exit 0
+# Persist the resolved thread name so user_prompt.sh + stop.sh — which
+# run in separate shell processes — can read it without re-resolving.
+# Stop.sh deletes this file at session end.
+mkdir -p "$TINM_HOME"
+printf '%s\n' "$TINM_SESSION_THREAD" > "$SESSION_THREAD_FILE"
 
-# Venv must be installed before this hook can do anything useful. Fail
-# silently rather than spam every session if the user has not finished
-# install yet.
-[ -x "$VENV_PY" ] || exit 0
-[ -r "$LOAD_SCRIPT" ] || exit 0
+# DEC-4 cross-host bridge prompt is OUT OF SCOPE (Lane E). For now, run
+# the writable check; on refusal, log a one-line warning to the per-host
+# log and exit 0. The session stays usable — UserPromptSubmit will read
+# the file and either find the gate is now bridged (Lane E lands the
+# interactive prompt) or simply re-flag the refusal each turn.
+SKILL_DIR="$SKILL_DIR" "$VENV_PY" - "$TINM_SESSION_THREAD" "$HOOK_WARN_LOG" \
+    2>>"$HOOK_WARN_LOG" << 'PYEOF' || true
+import json, os, sys, datetime, pathlib
+sys.path.insert(0, os.environ['SKILL_DIR'])
+from tinm_provenance import compute_fingerprint, check_thread_writable
+from tinm_paths import THREADS_DIR
+
+thread_id, warn_log = sys.argv[1], sys.argv[2]
+tp = THREADS_DIR / f"{thread_id}.json"
+if not tp.exists():
+    sys.exit(0)
+try:
+    t = json.loads(tp.read_text())
+except (json.JSONDecodeError, OSError):
+    sys.exit(0)
+fp = compute_fingerprint(os.getcwd())
+ok, reason = check_thread_writable(t, fp)
+if not ok:
+    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    line = f"{ts} session_start gate-refused thread={thread_id} cwd={os.getcwd()} reason={reason}\n"
+    try:
+        with open(warn_log, "a") as f:
+            f.write(line)
+    except OSError:
+        pass
+PYEOF
 
 # Run the loader and let its markdown stdout enter Claude's context.
 # Stderr is dropped so warnings (e.g., LibreSSL noise) do not pollute.
-"$VENV_PY" "$LOAD_SCRIPT" "$THREAD_ID" 2>/dev/null
+if [ -r "$LOAD_SCRIPT" ]; then
+    "$VENV_PY" "$LOAD_SCRIPT" "$TINM_SESSION_THREAD" 2>/dev/null || true
+fi
 
 # Auto-journal: append a session_start entry to pcp/journal-<hostname>.jsonl.
 # Per-host file (not journal.jsonl) avoids the cross-host git race when
 # both ends append concurrently. Reads in tinm_journal.py glob
 # journal-*.jsonl to reconstruct the cross-host stream.
-"$VENV_PY" - "$THREAD_ID" "$TINM_PCP_DIR" << 'PYEOF' 2>/dev/null || true
+"$VENV_PY" - "$TINM_SESSION_THREAD" "$TINM_PCP_DIR" << 'PYEOF' 2>/dev/null || true
 import json, sys, datetime, pathlib, socket
 thread_id, pcp_dir = sys.argv[1], sys.argv[2]
 journal_path = pathlib.Path(pcp_dir) / f"journal-{socket.gethostname().replace('.', '-')}.jsonl"
@@ -167,3 +256,14 @@ entry = {
 with open(journal_path, "a") as f:
     f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 PYEOF
+
+# Clipboard watcher auto-start (opt-in via ~/.tinm/clipboard_enabled flag).
+# Detached background daemon — survives this hook's exit. No-op if not
+# opted in or already running. Privacy: the trigger phrase requirement
+# means clipboard content is never captured without explicit user intent.
+CLIPBOARD_SCRIPT="$SKILL_DIR/tinm_clipboard.py"
+if [ -x "$VENV_PY" ] && [ -r "$CLIPBOARD_SCRIPT" ] && [ -f "$TINM_HOME/clipboard_enabled" ]; then
+    "$VENV_PY" "$CLIPBOARD_SCRIPT" --ensure-daemon 2>/dev/null || true
+fi
+
+exit 0
