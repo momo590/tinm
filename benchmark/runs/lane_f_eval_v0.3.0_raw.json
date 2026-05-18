@@ -1,0 +1,2946 @@
+{
+  "tinm_full": [
+    {
+      "task_id": 0,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        975,
+        1022
+      ],
+      "subquestion_output_tokens": [
+        74,
+        60
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          5,
+          6,
+          2,
+          9,
+          0
+        ],
+        [
+          5,
+          6,
+          2,
+          9,
+          8
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Prince Bernhard of Orange-Nassau, van Vollenhoven is **Pieter van Vollenhoven** (as stated in Node 9, which identifies Prince Bernhard as \"the second son of Princess Margriet of the Netherlands and Pieter van Vollenhoven\").",
+        "Based on the context and the previous question identifying the father of Prince Bernhard of Orange-Nassau, van Vollenhoven as **Pieter van Vollenhoven**, there is no birth date provided for Pieter van Vollenhoven in the given context."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Prince Bernhard of Orange-Nassau, van Vollenhoven?": true,
+        "Q2: When were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Prince Bernhard of Orange-Nassau, van Vollenhoven?": true,
+        "Q2: When were they born?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 1,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        333,
+        356
+      ],
+      "subquestion_output_tokens": [
+        24,
+        20
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          11,
+          99,
+          93,
+          64,
+          166
+        ],
+        [
+          11,
+          99,
+          64,
+          166,
+          93
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, **Name the Man** was directed by **Victor Sj\u00f6str\u00f6m**.",
+        "The context does not contain information about Victor Sj\u00f6str\u00f6m's country of citizenship."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who directed Name the Man?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Name the Man?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 2,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        1006,
+        1027
+      ],
+      "subquestion_output_tokens": [
+        87,
+        37
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          27,
+          207,
+          20,
+          197,
+          199
+        ],
+        [
+          197,
+          199,
+          27,
+          20,
+          207
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, the question of who *created* Miss Seventeen is not explicitly stated. However, the context describes it as a reality television show on **MTV**, and the main judge was **Atoosa Rubenstein**, the editor-in-chief of *Seventeen* magazine, around which the show was based. The context does not name a specific creator or producer of the show.",
+        "Based on the context, Atoosa Rubenstein (who created Miss Seventeen as the main judge/driving force) was born in **Tehran, Iran**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.875,
+      "facts_found_symbolic": {
+        "Q1: Who created Miss Seventeen?": true,
+        "Q2: Where were they born?": true
+      },
+      "facts_found_judge": {
+        "Q1: Who created Miss Seventeen?": true,
+        "Q2: Where were they born?": true
+      },
+      "judge_quality": 0.75,
+      "had_distractor": false
+    },
+    {
+      "task_id": 3,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        1005,
+        1026
+      ],
+      "subquestion_output_tokens": [
+        26,
+        25
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          169,
+          32,
+          30,
+          175,
+          93
+        ],
+        [
+          169,
+          32,
+          30,
+          175,
+          93
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Meritaten is **Pharaoh Akhenaten**.",
+        "The context does not contain any information about where Meritaten or her father Akhenaten died."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Meritaten?": true,
+        "Q2: Where did they die?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Meritaten?": true,
+        "Q2: Where did they die?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 4,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        435,
+        456
+      ],
+      "subquestion_output_tokens": [
+        42,
+        38
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          41,
+          48,
+          42,
+          169,
+          40
+        ],
+        [
+          41,
+          48,
+          42,
+          169,
+          40
+        ]
+      ],
+      "responses": [
+        "Based on the context, **Taj al-Dawla** (Abu'l-Husain Ahmad) was the son of **'Adud al-Dawla**.",
+        "Based on the previous question, the father of Taj al-Dawla is **'Adud al-Dawla**, as stated in Node 48."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Taj al-Dawla?": true,
+        "Q2: Who is their father?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Taj al-Dawla?": true,
+        "Q2: Who is their father?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 5,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        464,
+        487
+      ],
+      "subquestion_output_tokens": [
+        42,
+        35
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          53,
+          50,
+          52,
+          56,
+          58
+        ],
+        [
+          53,
+          56,
+          58,
+          50,
+          52
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, the mother of Prince Nikolaus Wilhelm of Nassau was **Princess Pauline of W\u00fcrttemberg**, who was the second wife of William, Duke of Nassau.",
+        "The context does not contain information about the country of citizenship of Princess Pauline of W\u00fcrttemberg (the mother of Prince Nikolaus Wilhelm of Nassau)."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Prince Nikolaus Wilhelm of Nassau?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Prince Nikolaus Wilhelm of Nassau?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 6,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        356,
+        377
+      ],
+      "subquestion_output_tokens": [
+        30,
+        51
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          64,
+          99,
+          166,
+          11,
+          75
+        ],
+        [
+          64,
+          166,
+          99,
+          75,
+          11
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, **Marianela** (1940) was directed by **Benito Perojo**.",
+        "Based on the context provided, there is no information about where Benito Perojo (the director of *Marianela*) was born. The context only states that he directed the 1940 Spanish drama film."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who directed Marianela?": true,
+        "Q2: Where were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Marianela?": true,
+        "Q2: Where were they born?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 7,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        834,
+        857
+      ],
+      "subquestion_output_tokens": [
+        25,
+        59
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          169,
+          72,
+          175,
+          93,
+          221
+        ],
+        [
+          169,
+          72,
+          175,
+          221,
+          93
+        ]
+      ],
+      "responses": [
+        "Based on the context, Catherine All\u00e9gret's father is **Yves All\u00e9gret**.",
+        "Based on the context provided, Catherine All\u00e9gret's father is **Yves All\u00e9gret**. However, there is no information in the provided context about any siblings of Yves All\u00e9gret. I cannot answer this question with the given context."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Catherine All\u00e9gret?": true,
+        "Q2: And what is its sibling?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Catherine All\u00e9gret?": true,
+        "Q2: And what is its sibling?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 8,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        358,
+        399
+      ],
+      "subquestion_output_tokens": [
+        29,
+        58
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          75,
+          99,
+          64,
+          166,
+          11
+        ],
+        [
+          75,
+          166,
+          165,
+          64,
+          99
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, **Vestire gli ignudi** was directed by **Marcello Pagliero**.",
+        "The context provided does not contain any information about the death of Marcello Pagliero (the director of *Vestire gli ignudi*) or any other person that this question might be referring to. I cannot answer this question based on the available context."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who directed Vestire gli ignudi?": true,
+        "Q2: Where did they die?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Vestire gli ignudi?": true,
+        "Q2: Where did they die?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 9,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        971,
+        992
+      ],
+      "subquestion_output_tokens": [
+        38,
+        39
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          83,
+          81,
+          169,
+          175,
+          78
+        ],
+        [
+          83,
+          81,
+          169,
+          175,
+          78
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Ingegerd Olofsdotter of Sweden was **Olof Sk\u00f6tkonung**, the King of Sweden.",
+        "Based on the context, the mother of Ingegerd Olofsdotter of Sweden was **Estrid of the Obotrites** (Node 83)."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Ingegerd Olofsdotter of Sweden?": true,
+        "Q2: Who is their mother?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Ingegerd Olofsdotter of Sweden?": true,
+        "Q2: Who is their mother?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 10,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        419,
+        440
+      ],
+      "subquestion_output_tokens": [
+        43,
+        37
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          215,
+          197,
+          199,
+          221,
+          91
+        ],
+        [
+          197,
+          199,
+          215,
+          91,
+          221
+        ]
+      ],
+      "responses": [
+        "Based on the context, **Marion Black** performed \"Who Knows,\" a song he is best known for from 1970. He is an American soul singer and songwriter from Columbus, Ohio.",
+        "Based on the previous question about **\"Who Knows\"**, which was performed by **Marion Black**, the context states that he was born in **Columbus, Ohio**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.0,
+      "facts_found_symbolic": {
+        "Q1: Who performed Who...?": false,
+        "Q2: Where were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who performed Who...?": false,
+        "Q2: Where were they born?": false
+      },
+      "judge_quality": 0.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 11,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        382,
+        403
+      ],
+      "subquestion_output_tokens": [
+        27,
+        32
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          99,
+          97,
+          64,
+          166,
+          11
+        ],
+        [
+          99,
+          166,
+          97,
+          64,
+          11
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, **Lettre ouverte** was directed by **Alex Joff\u00e9**.",
+        "The context does not contain information about where Alex Joff\u00e9 (the director of *Lettre ouverte*) was born."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.4,
+      "facts_found_symbolic": {
+        "Q1: Who directed Lettre ouverte?": true,
+        "Q2: Where were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Lettre ouverte?": true,
+        "Q2: Where were they born?": false
+      },
+      "judge_quality": 0.3,
+      "had_distractor": false
+    },
+    {
+      "task_id": 12,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        1109,
+        712
+      ],
+      "subquestion_output_tokens": [
+        30,
+        76
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          101,
+          215,
+          197,
+          199,
+          193
+        ],
+        [
+          197,
+          199,
+          101,
+          215,
+          35
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, \"Voi Voi\" was performed by **Nora Brockstedt**.",
+        "The context does not mention a \"cause of death\" related to \"Voi Voi\" or its performer Nora Brockstedt. The only death mentioned in the context related to \"Voi Voi\" is that of **Georg Elgaaen in 2005**, but no cause of death is provided."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who performed Voi Voi?": true,
+        "Q2: And what is its cause of death?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who performed Voi Voi?": true,
+        "Q2: And what is its cause of death?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 13,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        663,
+        686
+      ],
+      "subquestion_output_tokens": [
+        66,
+        56
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          112,
+          79,
+          104,
+          107,
+          105
+        ],
+        [
+          104,
+          107,
+          112,
+          105,
+          79
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, there is no information about the mother of Florent of Hainaut. The context mentions Florent of Hainaut only briefly in relation to Engilbert of Liederkerque, but does not provide details about Florent's parentage.",
+        "The context does not provide information about the country of citizenship of Florent of Hainaut's mother.\n\n(Note: From the prior question, the mother of Florent of Hainaut was not directly identified in the provided context either.)"
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Florent of Hainaut?": false,
+        "Q2: What is their country of citizenship?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Florent of Hainaut?": false,
+        "Q2: What is their country of citizenship?": false
+      },
+      "judge_quality": 0.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 14,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        600,
+        623
+      ],
+      "subquestion_output_tokens": [
+        63,
+        58
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          115,
+          117,
+          118,
+          122,
+          114
+        ],
+        [
+          118,
+          122,
+          117,
+          115,
+          114
+        ]
+      ],
+      "responses": [
+        "Based on the context, the spouse of Beatrice I, Countess of Burgundy was **Frederick I (Frederick Barbarossa), Holy Roman Emperor** (referred to as Frederick III Barbarossa in Node 115 and Frederick I, Holy Roman Emperor in Node 117).",
+        "Based on the context from the previous question, the spouse of Beatrice I, Countess of Burgundy was **Frederick I, Holy Roman Emperor** (Frederick Barbarossa). However, the provided context does not contain specific information about his country of citizenship."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the spouse of Beatrice I, Countess of Burgundy?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the spouse of Beatrice I, Countess of Burgundy?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 15,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        350,
+        371
+      ],
+      "subquestion_output_tokens": [
+        51,
+        83
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          129,
+          169,
+          131,
+          133,
+          125
+        ],
+        [
+          169,
+          131,
+          129,
+          125,
+          133
+        ]
+      ],
+      "responses": [
+        "The provided context does not contain information about John II of Baden or his father. The context mentions Beatrix of Baden (in relation to Sabina, Duchess of Bavaria) but does not identify John II of Baden's father.",
+        "Based on the previous question in this conversation, the father of John II of Baden was **Herman II, Margrave of Baden** (as established in question 1). Now you are asking about *his* father.\n\nHowever, the provided context does not contain information about the father of Herman II, Margrave of Baden. I cannot answer this question based solely on the context provided."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of John II of Baden?": false,
+        "Q2: Who is their father?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of John II of Baden?": false,
+        "Q2: Who is their father?": false
+      },
+      "judge_quality": 0.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 16,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        959,
+        983
+      ],
+      "subquestion_output_tokens": [
+        47,
+        54
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          135,
+          143,
+          134,
+          142,
+          136
+        ],
+        [
+          135,
+          143,
+          142,
+          134,
+          136
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Henry St John, 18th Baron St John of Bletso was **Beauchamp St John, 17th Baron St John of Bletso**.",
+        "Based on the context, **Beauchamp St John, 17th Baron St John of Bletso** (the father of Henry St John, 18th Baron St John of Bletso) died in **1912**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.55,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Henry St John, 18th Baron St John of Bletso?": true,
+        "Q2: And what is its date of death?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Henry St John, 18th Baron St John of Bletso?": true,
+        "Q2: And what is its date of death?": false
+      },
+      "judge_quality": 0.6,
+      "had_distractor": false
+    },
+    {
+      "task_id": 17,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        782,
+        806
+      ],
+      "subquestion_output_tokens": [
+        46,
+        41
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          150,
+          147,
+          149,
+          144,
+          148
+        ],
+        [
+          150,
+          147,
+          149,
+          148,
+          144
+        ]
+      ],
+      "responses": [
+        "Based on the context, the mother of Engelbert of Cleves, Count of Nevers was **Elizabeth of Nevers**, who was the wife of John I, Duke of Cleves.",
+        "Based on the context, Elizabeth of Nevers (the mother of Engelbert of Cleves, Count of Nevers) died on **21 June 1483**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Engelbert of Cleves, Count of Nevers?": true,
+        "Q2: And what is its date of death?": true
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Engelbert of Cleves, Count of Nevers?": true,
+        "Q2: And what is its date of death?": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 18,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        520,
+        544
+      ],
+      "subquestion_output_tokens": [
+        32,
+        48
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          157,
+          162,
+          156,
+          155,
+          158
+        ],
+        [
+          156,
+          158,
+          162,
+          157,
+          155
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, the mother of Conan II, Duke of Brittany was **Bertha of Blois**.",
+        "Based on the context, the mother of Conan II, Duke of Brittany was **Bertha of Blois**. However, her date of death is **not provided** in the given context."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Conan II, Duke of Brittany?": true,
+        "Q2: And what is its date of death?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Conan II, Duke of Brittany?": true,
+        "Q2: And what is its date of death?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 19,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        367,
+        388
+      ],
+      "subquestion_output_tokens": [
+        28,
+        18
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          167,
+          99,
+          64,
+          166,
+          11
+        ],
+        [
+          167,
+          166,
+          99,
+          64,
+          11
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, **Desolation Angels** (1995) was directed by **Tim McCann**.",
+        "The context provided does not contain any information about Tim McCann's education."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who directed Desolation Angels?": true,
+        "Q2: Where were they educated?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Desolation Angels?": true,
+        "Q2: Where were they educated?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 20,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        920,
+        941
+      ],
+      "subquestion_output_tokens": [
+        88,
+        128
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          177,
+          173,
+          170,
+          176,
+          171
+        ],
+        [
+          177,
+          173,
+          170,
+          171,
+          176
+        ]
+      ],
+      "responses": [
+        "Based on the context, the sibling of Beltr\u00e1n V\u00e9lez de Guevara, Marquis of Campo Real, is **\u00cd\u00f1igo V\u00e9lez de Guevara, 8th Count of O\u00f1ate** \u2014 Node 173 explicitly states that \u00cd\u00f1igo's \"younger brother was Beltr\u00e1n, Viceroy of Sardinia.\"",
+        "Based on the context, the sibling of Beltr\u00e1n V\u00e9lez de Guevara, Marquis of Campo Real, is **\u00cd\u00f1igo V\u00e9lez de Guevara, 8th Count of O\u00f1ate**.\n\nTheir father was **\u00cd\u00f1igo V\u00e9lez de Guevara, 7th Count of O\u00f1ate**, as stated in Node 173: \"He was the son of \u00cd\u00f1igo V\u00e9lez de Guevara, 7th Count of O\u00f1ate and Catalina V\u00e9lez.\""
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "Q1: What is the sibling of Beltr\u00e1n V\u00e9lez de Guevara, Marquis of Campo Real?": true,
+        "Q2: Who is their father?": true
+      },
+      "facts_found_judge": {
+        "Q1: What is the sibling of Beltr\u00e1n V\u00e9lez de Guevara, Marquis of Campo Real?": true,
+        "Q2: Who is their father?": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 21,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        917,
+        938
+      ],
+      "subquestion_output_tokens": [
+        84,
+        50
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          185,
+          179,
+          181,
+          186,
+          184
+        ],
+        [
+          185,
+          179,
+          181,
+          184,
+          186
+        ]
+      ],
+      "responses": [
+        "The provided context does not explicitly state who the father of Charles Willoughby, 10th Baron Willoughby of Parham is. The context only mentions that he succeeded to the title in September 1678 on the death of John Willoughby, 9th Baron Willoughby of Parham, and that he died without issue in 1679.",
+        "Based on the context provided, the father of Charles Willoughby, 10th Baron Willoughby of Parham is not explicitly stated in the provided nodes. Therefore, I cannot determine who his mother is either."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Charles Willoughby, 10th Baron Willoughby of Parham?": false,
+        "Q2: Who is their mother?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Charles Willoughby, 10th Baron Willoughby of Parham?": false,
+        "Q2: Who is their mother?": false
+      },
+      "judge_quality": 0.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 22,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        792,
+        813
+      ],
+      "subquestion_output_tokens": [
+        34,
+        56
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          188,
+          191,
+          169,
+          175,
+          93
+        ],
+        [
+          188,
+          191,
+          93,
+          169,
+          175
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Archduchess Dolores of Austria was **Archduke Leopold Salvator of Austria**.",
+        "Based on the provided context, there is **no information** about the mother of Archduchess Dolores of Austria. The context only identifies her father as **Archduke Leopold Salvator of Austria**, but does not mention her mother."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Archduchess Dolores of Austria?": true,
+        "Q2: Who is their mother?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Archduchess Dolores of Austria?": true,
+        "Q2: Who is their mother?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 23,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        466,
+        487
+      ],
+      "subquestion_output_tokens": [
+        25,
+        68
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          194,
+          192,
+          79,
+          93,
+          114
+        ],
+        [
+          194,
+          79,
+          192,
+          114,
+          93
+        ]
+      ],
+      "responses": [
+        "Based on the context, the mother of Suzanne Farrington was **Vivien Leigh**.",
+        "Based on the context provided, **Vivien Leigh's** place of death is not mentioned in the provided context. However, based on the previous answer, Suzanne Farrington's mother was **Vivien Leigh**, and the context does not include details about where Vivien Leigh died."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Suzanne Farrington?": true,
+        "Q2: Where did they die?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Suzanne Farrington?": true,
+        "Q2: Where did they die?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 24,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        472,
+        493
+      ],
+      "subquestion_output_tokens": [
+        27,
+        65
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          93,
+          201,
+          221,
+          197,
+          199
+        ],
+        [
+          197,
+          199,
+          93,
+          221,
+          201
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, Consort Liang was an imperial consort to **Emperor Zhang of Han**.",
+        "Based on the context, **Emperor Zhang of Han** (the spouse of Consort Liang) does not have a birthplace mentioned in the provided context. The context only provides information about Consort Liang herself, and no birthplace details are given for either her or Emperor Zhang."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.4,
+      "facts_found_symbolic": {
+        "Q1: Who is the spouse of Consort Liang?": true,
+        "Q2: Where were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the spouse of Consort Liang?": true,
+        "Q2: Where were they born?": false
+      },
+      "judge_quality": 0.3,
+      "had_distractor": false
+    },
+    {
+      "task_id": 25,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        616,
+        637
+      ],
+      "subquestion_output_tokens": [
+        38,
+        48
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          211,
+          206,
+          207,
+          209,
+          210
+        ],
+        [
+          211,
+          206,
+          209,
+          207,
+          210
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Charles Gordon, 2nd Earl of Aboyne is **Charles Gordon, 1st Earl of Aboyne**.",
+        "Based on the context, the mother of Charles Gordon, 2nd Earl of Aboyne, was **Elizabeth Lyon** (she was the wife of Charles Gordon, 1st Earl of Aboyne)."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Charles Gordon, 2nd Earl of Aboyne?": true,
+        "Q2: Who is their mother?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Charles Gordon, 2nd Earl of Aboyne?": true,
+        "Q2: Who is their mother?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 26,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        1675,
+        913
+      ],
+      "subquestion_output_tokens": [
+        31,
+        80
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          215,
+          101,
+          32,
+          110,
+          193
+        ],
+        [
+          215,
+          101,
+          32,
+          213,
+          228
+        ]
+      ],
+      "responses": [
+        "Based on the context, \"This Time\" was written and performed by **Waylon Jennings**, an American country music artist.",
+        "Based on the context, \"This Time\" is a **song**, not a person, so it does not have a place of burial. You may be thinking of a different subject. If you are asking about **Emperor Daigo** (mentioned in the context), he is named after his place of burial, but the specific name of that place is not provided in the context."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who performed This Time?": true,
+        "Q2: And what is its place of burial?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who performed This Time?": true,
+        "Q2: And what is its place of burial?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 27,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        741,
+        762
+      ],
+      "subquestion_output_tokens": [
+        54,
+        51
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          217,
+          222,
+          169,
+          158,
+          175
+        ],
+        [
+          217,
+          222,
+          169,
+          158,
+          175
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, the answer is not explicitly stated. The context mentions Edward I of England in relation to his descendants (Edward Despenser being his great-grandson, and Henry being his son), but does not identify Edward I's father.",
+        "Based on the context provided, the previous answer established that the father of Edward I of England was **Henry III of England**.\n\nFrom Node 158, it is mentioned that Henry III of England's spouse was **Eleanor of Provence**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.7,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Edward I of England?": false,
+        "Q2: Who is their spouse?": true
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Edward I of England?": true,
+        "Q2: Who is their spouse?": true
+      },
+      "judge_quality": 0.9,
+      "had_distractor": false
+    },
+    {
+      "task_id": 28,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        982,
+        908
+      ],
+      "subquestion_output_tokens": [
+        30,
+        36
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          230,
+          93,
+          226,
+          221,
+          90
+        ],
+        [
+          230,
+          226,
+          93,
+          221,
+          213
+        ]
+      ],
+      "responses": [
+        "Based on the context, the spouse of Meritites I was **King Khufu** (her half-brother).",
+        "Based on the context, Meritites I was buried in the **middle Queen's Pyramid in Giza (\"Pyramid G 1b\")**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who is the spouse of Meritites I?": true,
+        "Q2: And what is its place of burial?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the spouse of Meritites I?": true,
+        "Q2: And what is its place of burial?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 29,
+      "agent_name": "tinm_full",
+      "subquestion_input_tokens": [
+        520,
+        543
+      ],
+      "subquestion_output_tokens": [
+        30,
+        55
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          234,
+          79,
+          93,
+          114,
+          221
+        ],
+        [
+          79,
+          234,
+          221,
+          93,
+          114
+        ]
+      ],
+      "responses": [
+        "Based on the context, the mother of Dexter Young is **Connie Chan**, a well-known Hong Kong actress.",
+        "Based on the context provided, Dexter Young's mother is **Connie Chan**, a well-known Hong Kong actress. Since Dexter Young himself is identified as a **Hong Kong** actor, his country of citizenship is **Hong Kong**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Dexter Young?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Dexter Young?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    }
+  ],
+  "tinm_b2_conductor": [
+    {
+      "task_id": 0,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        1013,
+        1060
+      ],
+      "subquestion_output_tokens": [
+        64,
+        50
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          5,
+          6,
+          2,
+          9,
+          0
+        ],
+        [
+          5,
+          6,
+          2,
+          9,
+          8
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Prince Bernhard of Orange-Nassau, van Vollenhoven is **Pieter van Vollenhoven** (with his mother being Princess Margriet of the Netherlands), as stated in Node 9 and confirmed in Node 6.",
+        "Based on the context, **Pieter van Vollenhoven** (the father of Prince Bernhard of Orange-Nassau, van Vollenhoven) does not have a date of birth mentioned in the provided context."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Prince Bernhard of Orange-Nassau, van Vollenhoven?": true,
+        "Q2: When were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Prince Bernhard of Orange-Nassau, van Vollenhoven?": true,
+        "Q2: When were they born?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 1,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        358,
+        381
+      ],
+      "subquestion_output_tokens": [
+        22,
+        40
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          11,
+          99,
+          93,
+          64,
+          166
+        ],
+        [
+          11,
+          99,
+          64,
+          166,
+          93
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, **Victor Sj\u00f6str\u00f6m** directed *Name the Man*.",
+        "Based on the context, the director of *Name the Man* is **Victor Sj\u00f6str\u00f6m**. However, the provided context does not contain information about his country of citizenship."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.45,
+      "facts_found_symbolic": {
+        "Q1: Who directed Name the Man?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Name the Man?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "judge_quality": 0.4,
+      "had_distractor": false
+    },
+    {
+      "task_id": 2,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        1034,
+        1055
+      ],
+      "subquestion_output_tokens": [
+        68,
+        34
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          27,
+          207,
+          20,
+          197,
+          199
+        ],
+        [
+          197,
+          199,
+          27,
+          20,
+          207
+        ]
+      ],
+      "responses": [
+        "Based on the context, **Atoosa Rubenstein** created Miss Seventeen, serving as the main judge and being the editor-in-chief of *Seventeen* magazine, around which the show was based.\n\nHer place of birth is **Tehran, Iran** (as noted in Node 20).",
+        "Based on the context, Atoosa Rubenstein (the creator/main judge of Miss Seventeen) was born in **Tehran, Iran**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "Q1: Who created Miss Seventeen?": true,
+        "Q2: Where were they born?": true
+      },
+      "facts_found_judge": {
+        "Q1: Who created Miss Seventeen?": true,
+        "Q2: Where were they born?": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 3,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        1029,
+        1050
+      ],
+      "subquestion_output_tokens": [
+        25,
+        58
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          169,
+          32,
+          30,
+          175,
+          93
+        ],
+        [
+          169,
+          32,
+          30,
+          175,
+          93
+        ]
+      ],
+      "responses": [
+        "Based on the context, Meritaten's father is **Pharaoh Akhenaten**.",
+        "Based on the prior session digest, we're looking for where **Akhenaten** (Meritaten's father) died.\n\nThe provided context does not contain information about where Akhenaten died. I cannot answer this question based on the available context."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.4,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Meritaten?": true,
+        "Q2: Where did they die?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Meritaten?": true,
+        "Q2: Where did they die?": false
+      },
+      "judge_quality": 0.3,
+      "had_distractor": false
+    },
+    {
+      "task_id": 4,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        464,
+        485
+      ],
+      "subquestion_output_tokens": [
+        57,
+        136
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          41,
+          48,
+          42,
+          169,
+          40
+        ],
+        [
+          41,
+          48,
+          42,
+          169,
+          40
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, **Taj al-Dawla**'s father was **'Adud al-Dawla**, as stated in Node 48: \"He was the son of 'Adud al-Dawla.\"",
+        "Based on the context provided, **Taj al-Dawla's father is 'Adud al-Dawla** (as stated in Node 48: \"He was the son of 'Adud al-Dawla\").\n\nTherefore, **'Adud al-Dawla is the paternal grandfather of Taj al-Dawla's children**, but to fully answer your overall goal of identifying Taj al-Dawla's paternal grandfather, we would need to find who 'Adud al-Dawla's father is \u2014 which is **not provided in the current context**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.4,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Taj al-Dawla?": true,
+        "Q2: Who is their father?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Taj al-Dawla?": true,
+        "Q2: Who is their father?": false
+      },
+      "judge_quality": 0.3,
+      "had_distractor": false
+    },
+    {
+      "task_id": 5,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        492,
+        515
+      ],
+      "subquestion_output_tokens": [
+        41,
+        98
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          53,
+          50,
+          52,
+          56,
+          58
+        ],
+        [
+          53,
+          56,
+          58,
+          50,
+          52
+        ]
+      ],
+      "responses": [
+        "Based on the context, the mother of Prince Nikolaus Wilhelm of Nassau was **Princess Pauline of W\u00fcrttemberg** (his father William, Duke of Nassau's second wife).",
+        "Based on the context, the mother of Prince Nikolaus Wilhelm of Nassau is **Princess Pauline of W\u00fcrttemberg**. The name \"W\u00fcrttemberg\" refers to a German state, indicating she is from **Germany**.\n\nHowever, the provided context does not explicitly state Princess Pauline of W\u00fcrttemberg's country of citizenship. The answer is inferred from the name \"W\u00fcrttemberg,\" which was a kingdom/state in what is now Germany."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.925,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Prince Nikolaus Wilhelm of Nassau?": true,
+        "Q2: What is their country of citizenship?": true
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Prince Nikolaus Wilhelm of Nassau?": true,
+        "Q2: What is their country of citizenship?": true
+      },
+      "judge_quality": 0.85,
+      "had_distractor": false
+    },
+    {
+      "task_id": 6,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        391,
+        412
+      ],
+      "subquestion_output_tokens": [
+        30,
+        47
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          64,
+          99,
+          166,
+          11,
+          75
+        ],
+        [
+          64,
+          166,
+          99,
+          75,
+          11
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, **Benito Perojo** directed the 1940 film *Marianela*.",
+        "Based on the context provided, the director of *Marianela* (1940) was **Benito Perojo**. However, the provided context does not contain information about his place of birth."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who directed Marianela?": true,
+        "Q2: Where were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Marianela?": true,
+        "Q2: Where were they born?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 7,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        859,
+        882
+      ],
+      "subquestion_output_tokens": [
+        27,
+        67
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          169,
+          72,
+          175,
+          93,
+          221
+        ],
+        [
+          169,
+          72,
+          175,
+          221,
+          93
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, the father of Catherine All\u00e9gret is **Yves All\u00e9gret**.",
+        "Based on the context provided, the father of Catherine All\u00e9gret is **Yves All\u00e9gret**.\n\nHowever, the context does not contain any information about Yves All\u00e9gret's siblings, so I cannot determine who the uncle of Catherine All\u00e9gret is from the provided material."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.45,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Catherine All\u00e9gret?": true,
+        "Q2: And what is its sibling?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Catherine All\u00e9gret?": true,
+        "Q2: And what is its sibling?": false
+      },
+      "judge_quality": 0.4,
+      "had_distractor": false
+    },
+    {
+      "task_id": 8,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        387,
+        428
+      ],
+      "subquestion_output_tokens": [
+        29,
+        52
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          75,
+          99,
+          64,
+          166,
+          11
+        ],
+        [
+          75,
+          166,
+          165,
+          64,
+          99
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, **Vestire gli ignudi** was directed by **Marcello Pagliero**.",
+        "Based on the context provided, **Marcello Pagliero** directed *Vestire gli ignudi*, but the context does not contain any information about where he died. I cannot answer this question based solely on the provided context."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.45,
+      "facts_found_symbolic": {
+        "Q1: Who directed Vestire gli ignudi?": true,
+        "Q2: Where did they die?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Vestire gli ignudi?": true,
+        "Q2: Where did they die?": false
+      },
+      "judge_quality": 0.4,
+      "had_distractor": false
+    },
+    {
+      "task_id": 9,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        1004,
+        1025
+      ],
+      "subquestion_output_tokens": [
+        38,
+        46
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          83,
+          81,
+          169,
+          175,
+          78
+        ],
+        [
+          83,
+          81,
+          169,
+          175,
+          78
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Ingegerd Olofsdotter of Sweden is **Olof Sk\u00f6tkonung**, the King of Sweden.",
+        "Based on the context, the mother of Olof Sk\u00f6tkonung (Ingegerd's father) was **Sigrid the Haughty**, according to Icelandic sources."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Ingegerd Olofsdotter of Sweden?": true,
+        "Q2: Who is their mother?": true
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Ingegerd Olofsdotter of Sweden?": true,
+        "Q2: Who is their mother?": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 10,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        447,
+        468
+      ],
+      "subquestion_output_tokens": [
+        56,
+        50
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          215,
+          197,
+          199,
+          221,
+          91
+        ],
+        [
+          197,
+          199,
+          215,
+          91,
+          221
+        ]
+      ],
+      "responses": [
+        "Based on the context, **Marion Black** performed the song \"Who Knows.\" He is an American soul singer and songwriter from **Columbus, Ohio**.\n\nTherefore, the place of birth of the performer of \"Who Knows\" is **Columbus, Ohio**.",
+        "Based on the prior conversation, the performer of \"Who...\" has not yet been clearly identified from the provided context. The context does not contain sufficient information to answer the original question about who performed \"Who...\" or where they were born."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.0,
+      "facts_found_symbolic": {
+        "Q1: Who performed Who...?": false,
+        "Q2: Where were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who performed Who...?": false,
+        "Q2: Where were they born?": false
+      },
+      "judge_quality": 0.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 11,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        411,
+        432
+      ],
+      "subquestion_output_tokens": [
+        26,
+        47
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          99,
+          97,
+          64,
+          166,
+          11
+        ],
+        [
+          99,
+          166,
+          97,
+          64,
+          11
+        ]
+      ],
+      "responses": [
+        "Based on the context, **Lettre ouverte** was directed by **Alex Joff\u00e9**.",
+        "Based on the context provided, the director of *Lettre Ouverte* is **Alex Joff\u00e9**, but the context does not contain any information about where Alex Joff\u00e9 was born."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.4,
+      "facts_found_symbolic": {
+        "Q1: Who directed Lettre ouverte?": true,
+        "Q2: Where were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Lettre ouverte?": true,
+        "Q2: Where were they born?": false
+      },
+      "judge_quality": 0.3,
+      "had_distractor": false
+    },
+    {
+      "task_id": 12,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        1140,
+        743
+      ],
+      "subquestion_output_tokens": [
+        27,
+        60
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          101,
+          215,
+          197,
+          199,
+          193
+        ],
+        [
+          197,
+          199,
+          101,
+          215,
+          35
+        ]
+      ],
+      "responses": [
+        "Based on the context, **Nora Brockstedt** performed \"Voi Voi.\"",
+        "Based on the context provided, the performer of \"Voi Voi\" was **Nora Brockstedt**. However, the provided context does not contain any information about her cause of death. I cannot answer this question based solely on the available context."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.4,
+      "facts_found_symbolic": {
+        "Q1: Who performed Voi Voi?": true,
+        "Q2: And what is its cause of death?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who performed Voi Voi?": true,
+        "Q2: And what is its cause of death?": false
+      },
+      "judge_quality": 0.3,
+      "had_distractor": false
+    },
+    {
+      "task_id": 13,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        691,
+        714
+      ],
+      "subquestion_output_tokens": [
+        23,
+        51
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          112,
+          79,
+          104,
+          107,
+          105
+        ],
+        [
+          104,
+          107,
+          112,
+          105,
+          79
+        ]
+      ],
+      "responses": [
+        "The provided context does not contain information about the mother of Florent of Hainaut.",
+        "Based on the previous question's answer, the mother of Florent of Hainaut was **Philippa of Luxembourg**. However, the provided context does not contain information about Philippa of Luxembourg's country of citizenship."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Florent of Hainaut?": false,
+        "Q2: What is their country of citizenship?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Florent of Hainaut?": false,
+        "Q2: What is their country of citizenship?": false
+      },
+      "judge_quality": 0.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 14,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        632,
+        655
+      ],
+      "subquestion_output_tokens": [
+        80,
+        110
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          115,
+          117,
+          118,
+          122,
+          114
+        ],
+        [
+          118,
+          122,
+          117,
+          115,
+          114
+        ]
+      ],
+      "responses": [
+        "Based on the context, the spouse of Beatrice I, Countess of Burgundy was **Frederick I, Holy Roman Emperor** (Frederick Barbarossa), as referenced in Node 117, which states that Otto I was \"the fourth son of Frederick I, Holy Roman Emperor, by his second wife Beatrice I, Countess of Burgundy.\"",
+        "Based on the context, Beatrice I, Countess of Burgundy's husband was **Frederick I, Holy Roman Emperor** (also known as Frederick Barbarossa), as mentioned in Node 117, which states she was his second wife.\n\nHowever, the provided context does not explicitly state Frederick I's country of citizenship. Given his title as **Holy Roman Emperor**, he would be associated with the **Holy Roman Empire**, but this is not directly stated as his \"country of citizenship\" in the context provided."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the spouse of Beatrice I, Countess of Burgundy?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the spouse of Beatrice I, Countess of Burgundy?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 15,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        377,
+        398
+      ],
+      "subquestion_output_tokens": [
+        63,
+        41
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          129,
+          169,
+          131,
+          133,
+          125
+        ],
+        [
+          169,
+          131,
+          129,
+          125,
+          133
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, Node 129 mentions **Hermann II of Baden** as the first to use the title Margrave of Baden, but the context does not explicitly state who the father of John II of Baden is.\n\nThe answer is **not found** in the provided context.",
+        "Based on the context provided, I cannot find information about the father of John II of Baden's father. The context does not contain the relevant genealogical information needed to answer this question."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of John II of Baden?": false,
+        "Q2: Who is their father?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of John II of Baden?": false,
+        "Q2: Who is their father?": false
+      },
+      "judge_quality": 0.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 16,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        999,
+        1023
+      ],
+      "subquestion_output_tokens": [
+        47,
+        53
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          135,
+          143,
+          134,
+          142,
+          136
+        ],
+        [
+          135,
+          143,
+          142,
+          134,
+          136
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Henry St John, 18th Baron St John of Bletso was **Beauchamp St John, 17th Baron St John of Bletso**.",
+        "Based on the context, Henry St John, 18th Baron St John of Bletso's father was **Beauchamp St John, 17th Baron St John of Bletso**, who died in **1912**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.55,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Henry St John, 18th Baron St John of Bletso?": true,
+        "Q2: And what is its date of death?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Henry St John, 18th Baron St John of Bletso?": true,
+        "Q2: And what is its date of death?": false
+      },
+      "judge_quality": 0.6,
+      "had_distractor": false
+    },
+    {
+      "task_id": 17,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        811,
+        835
+      ],
+      "subquestion_output_tokens": [
+        32,
+        39
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          150,
+          147,
+          149,
+          144,
+          148
+        ],
+        [
+          150,
+          147,
+          149,
+          148,
+          144
+        ]
+      ],
+      "responses": [
+        "Based on the context, the mother of Engelbert of Cleves, Count of Nevers was **Elizabeth of Nevers**.",
+        "Based on the context, **Elizabeth of Nevers** (the mother of Engelbert, Count of Nevers) died on **21 June 1483**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Engelbert of Cleves, Count of Nevers?": true,
+        "Q2: And what is its date of death?": true
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Engelbert of Cleves, Count of Nevers?": true,
+        "Q2: And what is its date of death?": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 18,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        555,
+        579
+      ],
+      "subquestion_output_tokens": [
+        53,
+        48
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          157,
+          162,
+          156,
+          155,
+          158
+        ],
+        [
+          156,
+          158,
+          162,
+          157,
+          155
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, specifically **Node 162**, the mother of Conan II, Duke of Brittany was **Bertha of Blois** (wife of his father, Alan III, Duke of Brittany).",
+        "Based on the context, Conan II's mother was **Bertha of Blois**. However, the provided context does not contain any information about Bertha of Blois's date of death."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Conan II, Duke of Brittany?": true,
+        "Q2: And what is its date of death?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Conan II, Duke of Brittany?": true,
+        "Q2: And what is its date of death?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 19,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        401,
+        422
+      ],
+      "subquestion_output_tokens": [
+        26,
+        50
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          167,
+          99,
+          64,
+          166,
+          11
+        ],
+        [
+          167,
+          166,
+          99,
+          64,
+          11
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, **Tim McCann** directed *Desolation Angels* (1995).",
+        "Based on the context provided, **Tim McCann** directed *Desolation Angels* (1995), but the context does not contain any information about where he was educated. I cannot answer this question with the information provided."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who directed Desolation Angels?": true,
+        "Q2: Where were they educated?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who directed Desolation Angels?": true,
+        "Q2: Where were they educated?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 20,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        959,
+        980
+      ],
+      "subquestion_output_tokens": [
+        88,
+        182
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          177,
+          173,
+          170,
+          176,
+          171
+        ],
+        [
+          177,
+          173,
+          170,
+          171,
+          176
+        ]
+      ],
+      "responses": [
+        "Based on the context, the sibling of Beltr\u00e1n V\u00e9lez de Guevara, Marquis of Campo Real was **\u00cd\u00f1igo V\u00e9lez de Guevara, 8th Count of O\u00f1ate** \u2014 Node 173 explicitly states that Beltr\u00e1n (Viceroy of Sardinia) was \u00cd\u00f1igo's **younger brother**.",
+        "Based on the context, the father of both Beltr\u00e1n V\u00e9lez de Guevara (Marquis of Campo Real) and his sibling \u00cd\u00f1igo V\u00e9lez de Guevara (8th Count of O\u00f1ate) is **\u00cd\u00f1igo V\u00e9lez de Guevara, 7th Count of O\u00f1ate**.\n\nThis is confirmed in Node 177, which states Beltr\u00e1n was \"the son of I\u00f1igo V\u00e9lez de Guevara and Catalina de Guevara, 5th Countess of O\u00f1ate,\" and in Node 173, which states \u00cd\u00f1igo (8th Count) was \"the son of \u00cd\u00f1igo V\u00e9lez de Guevara, 7th Count of O\u00f1ate.\""
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "Q1: What is the sibling of Beltr\u00e1n V\u00e9lez de Guevara, Marquis of Campo Real?": true,
+        "Q2: Who is their father?": true
+      },
+      "facts_found_judge": {
+        "Q1: What is the sibling of Beltr\u00e1n V\u00e9lez de Guevara, Marquis of Campo Real?": true,
+        "Q2: Who is their father?": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 21,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        957,
+        978
+      ],
+      "subquestion_output_tokens": [
+        80,
+        51
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          185,
+          179,
+          181,
+          186,
+          184
+        ],
+        [
+          185,
+          179,
+          181,
+          184,
+          186
+        ]
+      ],
+      "responses": [
+        "The provided context does not explicitly state who the father of Charles Willoughby, 10th Baron Willoughby of Parham is. The context only mentions that he succeeded to the title in September 1678 on the death of John Willoughby, 9th Baron Willoughby of Parham, but does not name his father.",
+        "Based on the context provided, the article about Charles Willoughby, 10th Baron Willoughby of Parham does not explicitly mention who his mother was. The context does not contain enough information to answer this question."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Charles Willoughby, 10th Baron Willoughby of Parham?": false,
+        "Q2: Who is their mother?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Charles Willoughby, 10th Baron Willoughby of Parham?": false,
+        "Q2: Who is their mother?": false
+      },
+      "judge_quality": 0.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 22,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        824,
+        845
+      ],
+      "subquestion_output_tokens": [
+        35,
+        37
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          188,
+          191,
+          169,
+          175,
+          93
+        ],
+        [
+          188,
+          191,
+          93,
+          169,
+          175
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, the father of Archduchess Dolores of Austria is **Archduke Leopold Salvator of Austria**.",
+        "Based on the context provided, I cannot determine the mother of Archduke Leopold Salvator of Austria. The context does not contain information about his parentage."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Archduchess Dolores of Austria?": true,
+        "Q2: Who is their mother?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Archduchess Dolores of Austria?": true,
+        "Q2: Who is their mother?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    },
+    {
+      "task_id": 23,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        496,
+        517
+      ],
+      "subquestion_output_tokens": [
+        26,
+        54
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          194,
+          192,
+          79,
+          93,
+          114
+        ],
+        [
+          194,
+          79,
+          192,
+          114,
+          93
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, the mother of Suzanne Farrington was **Vivien Leigh**.",
+        "Based on the context provided, Suzanne Farrington's mother is **Vivien Leigh**. However, the provided context does not contain information about where Vivien Leigh died. I cannot answer this question with the information given."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Suzanne Farrington?": true,
+        "Q2: Where did they die?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Suzanne Farrington?": true,
+        "Q2: Where did they die?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 24,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        502,
+        523
+      ],
+      "subquestion_output_tokens": [
+        27,
+        43
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          93,
+          201,
+          221,
+          197,
+          199
+        ],
+        [
+          197,
+          199,
+          93,
+          221,
+          201
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, Consort Liang's husband (spouse) was **Emperor Zhang of Han**.",
+        "Based on the context provided, **Consort Liang's husband was Emperor Zhang of Han**. However, the context does not contain information about Emperor Zhang of Han's place of birth."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.4,
+      "facts_found_symbolic": {
+        "Q1: Who is the spouse of Consort Liang?": true,
+        "Q2: Where were they born?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the spouse of Consort Liang?": true,
+        "Q2: Where were they born?": false
+      },
+      "judge_quality": 0.3,
+      "had_distractor": false
+    },
+    {
+      "task_id": 25,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        650,
+        671
+      ],
+      "subquestion_output_tokens": [
+        38,
+        72
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          211,
+          206,
+          207,
+          209,
+          210
+        ],
+        [
+          211,
+          206,
+          209,
+          207,
+          210
+        ]
+      ],
+      "responses": [
+        "Based on the context, the father of Charles Gordon, 2nd Earl of Aboyne is **Charles Gordon, 1st Earl of Aboyne**.",
+        "Based on the context, the father of Charles Gordon, 2nd Earl of Aboyne is **Charles Gordon, 1st Earl of Aboyne**. According to Node 207, his mother (the paternal grandmother of Charles Gordon, 2nd Earl of Aboyne) was **Lady Anne Campbell**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 1.0,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Charles Gordon, 2nd Earl of Aboyne?": true,
+        "Q2: Who is their mother?": true
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Charles Gordon, 2nd Earl of Aboyne?": true,
+        "Q2: Who is their mother?": true
+      },
+      "judge_quality": 1.0,
+      "had_distractor": false
+    },
+    {
+      "task_id": 26,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        1711,
+        949
+      ],
+      "subquestion_output_tokens": [
+        21,
+        54
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          215,
+          101,
+          32,
+          110,
+          193
+        ],
+        [
+          215,
+          101,
+          32,
+          213,
+          228
+        ]
+      ],
+      "responses": [
+        "Based on the context, **Waylon Jennings** performed \"This Time.\"",
+        "Based on the context, **Waylon Jennings** performed \"This Time.\" However, the provided context does not contain information about Waylon Jennings' place of burial. I cannot answer this question based solely on the context given."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who performed This Time?": true,
+        "Q2: And what is its place of burial?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who performed This Time?": true,
+        "Q2: And what is its place of burial?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 27,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        765,
+        786
+      ],
+      "subquestion_output_tokens": [
+        106,
+        91
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          217,
+          222,
+          169,
+          158,
+          175
+        ],
+        [
+          217,
+          222,
+          169,
+          158,
+          175
+        ]
+      ],
+      "responses": [
+        "Based on the provided context, the answer is not explicitly stated. However, Node 158 mentions that Beatrice of England was the granddaughter of **King Henry III of England**, and since Beatrice was a daughter of Henry III, and Edward I was also a child of Henry III, this implies **Henry III of England** was the father of Edward I. But this is indirect inference from the context.\n\nThe context does not directly state who the father of Edward I of England is.",
+        "Based on the context provided, **Henry III of England's spouse was Eleanor of Provence** (as mentioned in Node 158, referring to \"King Henry III of England and Eleanor of Provence\").\n\nSince the previous question asked about the father of Edward I of England (Henry III), this indicates that **Eleanor of Provence** was Henry III's spouse \u2014 and as established, she is the mother of Edward I of England."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.875,
+      "facts_found_symbolic": {
+        "Q1: Who is the father of Edward I of England?": true,
+        "Q2: Who is their spouse?": true
+      },
+      "facts_found_judge": {
+        "Q1: Who is the father of Edward I of England?": true,
+        "Q2: Who is their spouse?": true
+      },
+      "judge_quality": 0.75,
+      "had_distractor": false
+    },
+    {
+      "task_id": 28,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        1011,
+        937
+      ],
+      "subquestion_output_tokens": [
+        30,
+        91
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          230,
+          93,
+          226,
+          221,
+          90
+        ],
+        [
+          230,
+          226,
+          93,
+          221,
+          213
+        ]
+      ],
+      "responses": [
+        "Based on the context, the spouse of Meritites I was **King Khufu** (her half-brother).",
+        "Based on the context, Meritites I's husband was **King Khufu**. However, the provided context does not contain information about Khufu's place of burial. The context only mentions that Meritites I herself was buried in the middle Queen's Pyramid in Giza (\"Pyramid G 1b\"), but Khufu's burial place is not stated in the given material."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.375,
+      "facts_found_symbolic": {
+        "Q1: Who is the spouse of Meritites I?": true,
+        "Q2: And what is its place of burial?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the spouse of Meritites I?": true,
+        "Q2: And what is its place of burial?": false
+      },
+      "judge_quality": 0.25,
+      "had_distractor": false
+    },
+    {
+      "task_id": 29,
+      "agent_name": "tinm_b2_conductor",
+      "subquestion_input_tokens": [
+        545,
+        568
+      ],
+      "subquestion_output_tokens": [
+        31,
+        45
+      ],
+      "subquestion_cache_read_tokens": [
+        0,
+        0
+      ],
+      "subquestion_nodes_visited": [
+        [
+          234,
+          79,
+          93,
+          114,
+          221
+        ],
+        [
+          79,
+          234,
+          221,
+          93,
+          114
+        ]
+      ],
+      "responses": [
+        "Based on the context provided, the mother of Dexter Young is **Connie Chan**, a well-known Hong Kong actress.",
+        "Based on the context provided, Dexter Young's mother is **Connie Chan**, who is a well-known **Hong Kong** actress. Therefore, her country of citizenship is **Hong Kong**."
+      ],
+      "distractor_input_tokens": [],
+      "distractor_output_tokens": [],
+      "quality_score": 0.5,
+      "facts_found_symbolic": {
+        "Q1: Who is the mother of Dexter Young?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "facts_found_judge": {
+        "Q1: Who is the mother of Dexter Young?": true,
+        "Q2: What is their country of citizenship?": false
+      },
+      "judge_quality": 0.5,
+      "had_distractor": false
+    }
+  ]
+}
