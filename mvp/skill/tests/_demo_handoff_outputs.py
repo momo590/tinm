@@ -57,9 +57,9 @@ def _run_minimal() -> None:
     os.makedirs(tmp + "/pcp/threads", exist_ok=True)
     minimal = {
         "pcp_version": "0.1",
-        "thread_id": "shopmeaway-libon-widget",
+        "thread_id": "acme-widget-rollout",
         "metadata": {
-            "title": "Libon × SMA widget rollout",
+            "title": "Acme widget rollout",
             "created_at": "2026-05-17T08:00:00Z",
             "last_updated": "2026-05-17T08:05:00Z",
         },
@@ -68,12 +68,12 @@ def _run_minimal() -> None:
             {
                 "turn": 1,
                 "role": "user",
-                "text": "Set up the Libon widget account and send the integration guide.",
+                "text": "Set up the Acme widget account and send the integration guide.",
                 "ts": "2026-05-17T08:05:00Z",
             }
         ],
     }
-    with open(tmp + "/pcp/threads/shopmeaway-libon-widget.json", "w") as f:
+    with open(tmp + "/pcp/threads/acme-widget-rollout.json", "w") as f:
         json.dump(minimal, f)
 
     from tinm_handoff import main
@@ -82,7 +82,7 @@ def _run_minimal() -> None:
     print("=" * 72)
     print("EXAMPLE 2 — Minimal thread (title + 1 user turn, --target generic)")
     print("=" * 72)
-    main(["shopmeaway-libon-widget"])
+    main(["acme-widget-rollout"])
 
 
 if __name__ == "__main__":

@@ -49,7 +49,7 @@ Public API
 
 Patterns
 --------
-Six families, French + English (Mouhamadou switches freely between the
+Six families, French + English (the user switches freely between the
 two), word-boundary anchored. Patterns are intentionally narrow — we
 prefer false negatives over false positives because a wrong "Picking up
 from" line is more annoying than no line at all.
@@ -106,17 +106,17 @@ class Signal(TypedDict, total=False):
 #   - Lane <A-F>       e.g. "Lane C tested"
 #   - step <digit>     e.g. "step 3 done"
 #   - étape <digit>    e.g. "étape 4 fini"
-#   - PR #<digit>      e.g. "PR #82 mergé"
+#   - PR #<digit>      e.g. "PR #42 mergé"
 #   - phase <digit/word>  e.g. "phase 2 livré"
 #
 # Notes on form choice:
 #   - Past-participle/past-tense verbs only ("done", "merged", "shipped",
 #     "fini", "mergé") — *not* infinitives ("to merge", "merger"). This
-#     avoids the "Waiting for Jordan to merge PR #82" false positive
-#     where "merge PR #82" trips a forward-order match.
+#     avoids the "Waiting for Alice to merge PR #42" false positive
+#     where "merge PR #42" trips a forward-order match.
 #   - "PR #N" is dropped from the forward-order alternation because it
 #     pulls in too many "to merge PR" / "review PR" false positives. We
-#     keep the reverse-order ("PR #82 mergé") which is the actual ack form.
+#     keep the reverse-order ("PR #42 mergé") which is the actual ack form.
 _DONE_VERB_FORWARD = (
     r"(?:done|fini(?:e|s)?|fait(?:e|s)?|termin[ée](?:e|s)?|shipped|livr[ée](?:e|s)?|"
     r"merged|merg[ée](?:e|s)?|completed?)"
@@ -131,7 +131,7 @@ _TASK_ID_FORWARD = (
     r"(?:T\d+|Lane\s+[A-F]|step\s+\d+|[ée]tape\s+\d+|phase\s+\w+)"
 )
 _TASK_ID_REVERSE = (
-    # Reverse order: id first ("PR #82 merged") — PR #N safe here.
+    # Reverse order: id first ("PR #42 merged") — PR #N safe here.
     r"(?:T\d+|Lane\s+[A-F]|step\s+\d+|[ée]tape\s+\d+|PR\s*#?\d+|phase\s+\w+)"
 )
 _TASK_DONE_RE = re.compile(
@@ -421,7 +421,7 @@ def next_action_block(
     The window is computed against the *current* turn (the max turn in
     the trajectory). This means a thread that has not been written to
     in days will still show its last signals on resume — exactly the
-    UX Mouhamadou asked for ("don't make me re-explain where I was").
+    UX the user asked for ("don't make me re-explain where I was").
     """
     entries = list(_iter_signals(thread_id))
     if not entries:
