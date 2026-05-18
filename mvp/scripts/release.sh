@@ -22,19 +22,22 @@ info() { printf "→ %s\n" "$*"; }
 
 usage() {
     cat >&2 <<EOF
-Usage: $(basename "$0") <new-version> [--skip-bench]
+Usage: $(basename "$0") <new-version> [--skip-bench] [--yes]
   new-version   semver x.y.z (e.g. 0.3.0)
   --skip-bench  skip mvp/scripts/bench_hooks.sh latency gate
+  --yes         non-interactive — auto-confirm prompts (CI / autopilot)
 EOF
     exit 1
 }
 
 # ---- 1. parse args --------------------------------------------------------
 SKIP_BENCH=0
+ASSUME_YES=0
 NEW_VERSION=""
 for a in "$@"; do
     case "$a" in
         --skip-bench) SKIP_BENCH=1 ;;
+        --yes|-y)     ASSUME_YES=1 ;;
         -h|--help)    usage ;;
         -*)           err "unknown flag: $a"; usage ;;
         *)            [ -z "$NEW_VERSION" ] && NEW_VERSION="$a" || { err "extra arg: $a"; usage; } ;;
@@ -107,6 +110,9 @@ CHANGELOG_TOUCHED=0
 if [ -f "$CHANGELOG" ]; then
     if ! grep -Eq "^## \[?${NEW_VERSION}\]?" "$CHANGELOG"; then
         warn "no CHANGELOG entry for $NEW_VERSION"
+        if [ "$ASSUME_YES" -eq 1 ]; then
+            err "no CHANGELOG entry for $NEW_VERSION (cannot prompt under --yes)"; exit 1
+        fi
         if [ -t 0 ]; then
             printf "Open \$EDITOR to add it? [y/N] "
             read -r reply
@@ -152,7 +158,10 @@ Ready to release $TAG:
 
 Will commit, tag $TAG, and push origin main + tags.
 EOF
-if [ -t 0 ]; then
+if [ "$ASSUME_YES" -eq 1 ]; then
+    confirm="y"
+    info "auto-confirming (--yes)"
+elif [ -t 0 ]; then
     printf "Proceed? [y/N] "
     read -r confirm
 else
