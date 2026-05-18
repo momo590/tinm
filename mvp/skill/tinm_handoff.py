@@ -20,7 +20,7 @@ The `--target` flag tunes the framing very lightly so the receiving
 agent recognises a "load this thread" command it knows:
 
   claude-code  →  prepends "/tinm load <slug>  # if TINM is installed"
-  openclaw     →  prepends "@bumblebee load thread <slug>"
+  openclaw     →  prepends "@agent load thread <slug>"
   generic      →  no extra header (default)
 
 `--clipboard` pipes the result to pbcopy (macOS) or xclip (Linux). If
@@ -248,7 +248,7 @@ def render_handoff(thread: dict, artifacts: dict, *, target: str = "generic") ->
         lines.append(f"/tinm load {slug}  # if TINM is installed on this machine")
         lines.append("")
     elif target == "openclaw":
-        lines.append(f"@bumblebee load thread {slug}")
+        lines.append(f"@agent load thread {slug}")
         lines.append("")
 
     lines.append(f"# Handoff — {title}")

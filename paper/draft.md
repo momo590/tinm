@@ -1,17 +1,6 @@
 # TINM: Compressed Trajectory Memory for Multi-Turn LLM Agents
 
-**Status**: end-to-end draft, ~90% complete. Abstract, Introduction, Method,
-Experimental Setup, Results, Discussion, and Conclusion are in full prose
-with all numbers integrated across the 5 benchmarks. Figure 1 is rendered
-(`paper/figures/fig1_pareto.{pdf,png}`, regenerable from
-`paper/figures/make_fig1.py`). Related Work pointers live in
-`paper/related_work.md`; the prose §2 cites them under their `@tag` names,
-and the corresponding BibTeX entries are inlined at the end of this file
-(to be verified before camera-ready).
-
----
-
-## Abstract (draft v0 — ~210 words)
+## Abstract
 
 LLM agents that span multiple turns of interaction face a structural memory
 trade-off. *Stateless RAG* re-issues retrieval at every turn, ignoring prior

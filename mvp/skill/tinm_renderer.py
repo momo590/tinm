@@ -4,7 +4,7 @@ Many artifacts written by Claude during prior work sessions are jargon-dense.
 They contain internal task slugs (`T0`, `T1-T2-T3`, `Lane A`), status sigils
 (`BLOCKER`, `[CLEAR]`, `Path C strict`, `noop`), dated lock phrases
 (`locked 2026-05-16`, `pinned 14:32Z`), raw thread IDs (`tinm-tour`,
-`loremind-resume-2026-05-17`), and parenthetical noise (`(via [[...]])`).
+`acme-resume-2026-05-17`), and parenthetical noise (`(via [[...]])`).
 
 These are useful for the writing agent (compact, unambiguous), but illegible
 when surfaced back to the human user at session start (`tinm_load.py`) or via
@@ -23,9 +23,8 @@ Wire-in points: `tinm_load.py` (named/approved artifact summary printing) and
 `tinm_artifact.py` (find results). Both gate on `TINM_RENDER_LEGACY=1`
 (default on).
 
-See design notes in `/root/.gstack/projects/tinm/design-humanize-resurface-2026-05-17.md`
-section "v0.2.3 TODO — Read-time structural renderer" and the memory entry
-`project_tinm_v023_renderer_todo.md`.
+See section "v0.2.3 — Read-time structural renderer" in the design notes
+maintained alongside this module's development log.
 """
 from __future__ import annotations
 
@@ -177,7 +176,7 @@ def _time_lock_repl(m: re.Match) -> str:
 
 
 # ─── Pattern 5: Raw thread IDs ─────────────────────────────────────────────────
-# Bare kebab-slug tokens like `tinm-tour`, `loremind-resume-2026-05-17`.
+# Bare kebab-slug tokens like `tinm-tour`, `acme-resume-2026-05-17`.
 # Match candidates, then check existence on disk before quoting.
 # Avoid: URLs (preceded by /), already-quoted strings, code in backticks.
 _SLUG_CANDIDATE_RE = re.compile(

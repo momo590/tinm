@@ -203,13 +203,13 @@ def test_target_claude_code_adds_load_line(tinm_tmp):
     assert "# Handoff — Rich thread — wedge analysis" in out
 
 
-def test_target_openclaw_adds_bumblebee_line(tinm_tmp):
+def test_target_openclaw_adds_agent_line(tinm_tmp):
     from tinm_handoff import render_handoff
 
     out = render_handoff(_rich_thread(), _rich_artifacts(), target="openclaw")
 
     first_line = out.splitlines()[0]
-    assert first_line == "@bumblebee load thread rich-thread"
+    assert first_line == "@agent load thread rich-thread"
 
 
 def test_target_generic_has_no_extra_header(tinm_tmp):
@@ -219,7 +219,7 @@ def test_target_generic_has_no_extra_header(tinm_tmp):
 
     # No load hint at the top
     assert not out.startswith("/tinm load")
-    assert not out.startswith("@bumblebee")
+    assert not out.startswith("@agent")
     # Just the markdown title
     assert out.startswith("# Handoff —")
 

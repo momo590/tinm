@@ -30,7 +30,7 @@ def isolated_tinm(monkeypatch, tmp_path):
 def test_happy_path_extracts_multiple_signals(isolated_tinm):
     from tinm_next_action import extract_signals
 
-    text = "T8 done, tests passing. Next: ship v0.3.0. Waiting for Jordan."
+    text = "T8 done, tests passing. Next: ship v0.3.0. Waiting for Alice."
     sigs = extract_signals(text, "user")
     types = {s["signal_type"] for s in sigs}
     assert {"task_done", "unblock", "next_explicit", "pending_ack"} <= types

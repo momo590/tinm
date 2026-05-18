@@ -121,7 +121,7 @@ class TestStatusSigils:
 
     def test_verrouille_french(self, tinm_tmp):
         from tinm_renderer import humanize
-        result = humanize("Plan verrouillé pour Loremind")
+        result = humanize("Plan verrouillé pour Acme")
         assert "locked in" in result
         assert "verrouill" not in result
 
@@ -268,7 +268,7 @@ class TestPerformance:
         import time
         # Realistic body length ~1500 chars
         body = (
-            "Plan d'architecture verrouillé pour Loremind v0.1 après /plan-eng-review. "
+            "Plan d'architecture verrouillé pour Acme v0.1 après /plan-eng-review. "
             "T0 BLOCKER tête de Lane A, deadline 2026-05-22. T1=restructure (déjà fait). "
             "T2=LLM provider abstraction. 14 implementation tasks T1-T14 avec parallelization "
             "lanes A-F. Path C strict + hard deadline. Plan locked 2026-05-16. [CLEAR] for ship."
@@ -286,13 +286,13 @@ class TestPerformance:
 class TestRealCorpus:
     """Snapshot-style: gnarly real artifact summaries should become readable."""
 
-    def test_loremind_summary(self, tinm_tmp, monkeypatch):
+    def test_acme_summary(self, tinm_tmp, monkeypatch):
         from tinm_renderer import humanize
         import tinm_renderer
         today = datetime(2026, 5, 17).date()
         monkeypatch.setattr(tinm_renderer, "_today", lambda: today)
         raw = (
-            "Plan verrouillé pour Loremind v0.1. T0 BLOCKER tête de Lane A, "
+            "Plan verrouillé pour Acme v0.1. T0 BLOCKER tête de Lane A, "
             "deadline 2026-05-22. T1-T14 avec parallelization lanes A-F. "
             "Path C strict + hard deadline 5 working days."
         )

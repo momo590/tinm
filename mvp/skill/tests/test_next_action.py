@@ -52,7 +52,7 @@ def test_task_done_lane(tinm_tmp):
 
 
 def test_task_done_pr_merged(tinm_tmp):
-    assert "task_done" in _types("PR #82 mergé sur main")
+    assert "task_done" in _types("PR #42 mergé sur main")
 
 
 def test_task_done_checkmark_only(tinm_tmp):
@@ -73,12 +73,12 @@ def test_unblock_french(tinm_tmp):
 
 
 def test_pending_english(tinm_tmp):
-    sigs = _types("Waiting for Jordan to merge PR #82")
+    sigs = _types("Waiting for Alice to merge PR #42")
     assert "pending_ack" in sigs
 
 
 def test_pending_french(tinm_tmp):
-    sigs = _types("En attente de la revue de Jordan")
+    sigs = _types("En attente de la revue d'Alice")
     assert "pending_ack" in sigs
 
 
@@ -86,10 +86,10 @@ def test_pending_captures_what(tinm_tmp):
     """The match field for pending_ack should include *what* we wait on."""
     from tinm_next_action import extract_signals
 
-    sigs = extract_signals("Waiting for Jordan to merge PR #82", "user")
+    sigs = extract_signals("Waiting for Alice to merge PR #42", "user")
     pending = [s for s in sigs if s["signal_type"] == "pending_ack"]
     assert pending
-    assert "jordan" in pending[0]["match"].lower()
+    assert "alice" in pending[0]["match"].lower()
 
 
 def test_next_explicit_english(tinm_tmp):
@@ -98,7 +98,7 @@ def test_next_explicit_english(tinm_tmp):
 
 
 def test_next_explicit_french(tinm_tmp):
-    sigs = _types("Prochaine étape : merger la PR #82")
+    sigs = _types("Prochaine étape : merger la PR #42")
     assert "next_explicit" in sigs
 
 
@@ -152,7 +152,7 @@ def test_multiple_signals_in_one_turn(tinm_tmp):
     """One turn can carry several signals — they should all be detected."""
     text = (
         "T8 done, all tests passing. Next: ship v0.2.3 tag. "
-        "Waiting for Jordan to merge PR #82."
+        "Waiting for Alice to merge PR #42."
     )
     sigs = _types(text)
     assert {"task_done", "unblock", "next_explicit", "pending_ack"} <= sigs
@@ -176,7 +176,7 @@ def test_record_signals_persists_jsonl(tinm_tmp):
     from tinm_next_action import record_signals, signals_path
 
     n = record_signals(
-        "scratch", 5, "user", "T8 done. Waiting for Jordan.", ts="2026-05-17T10:00:00Z"
+        "scratch", 5, "user", "T8 done. Waiting for Alice.", ts="2026-05-17T10:00:00Z"
     )
     assert n >= 2
 
@@ -281,7 +281,7 @@ def test_next_action_block_renders_signals(tinm_tmp):
         "scratch", 8, "user", "T8 done, all tests passing", ts="2026-05-17T08:00:00Z"
     )
     record_signals(
-        "scratch", 9, "user", "Waiting for Jordan to merge PR #82",
+        "scratch", 9, "user", "Waiting for Alice to merge PR #42",
         ts="2026-05-17T09:00:00Z",
     )
     record_signals(

@@ -45,7 +45,7 @@ def test_journal_glob_pattern():
 def test_journal_glob_matches_per_host_and_legacy(tmp_path):
     """The glob picks up both per-host and legacy-migrated files."""
     (tmp_path / "journal-MacBook.jsonl").write_text("")
-    (tmp_path / "journal-srv1418861.jsonl").write_text("")
+    (tmp_path / "journal-vps1.jsonl").write_text("")
     (tmp_path / "journal-legacy-pre-2026-05-14.jsonl").write_text("")
     (tmp_path / "unrelated.jsonl").write_text("")
 
@@ -53,7 +53,7 @@ def test_journal_glob_matches_per_host_and_legacy(tmp_path):
     assert matches == [
         "journal-MacBook.jsonl",
         "journal-legacy-pre-2026-05-14.jsonl",
-        "journal-srv1418861.jsonl",
+        "journal-vps1.jsonl",
     ]
 
 
