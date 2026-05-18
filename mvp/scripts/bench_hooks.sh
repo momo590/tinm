@@ -39,7 +39,7 @@ OUT_DIR="$REPO_ROOT/benchmark"
 OUT_JSON="$OUT_DIR/hook_perf_v0.3.0.json"
 
 WARMUP=5
-MEASURE=50
+MEASURE=100
 GATE_P99_MS=200
 
 # ---- preflight -------------------------------------------------------------

@@ -1,31 +1,31 @@
 {
-  "date": "2026-05-18T00:41:46Z",
-  "git_sha": "eaf951d",
+  "date": "2026-05-18T00:51:32Z",
+  "git_sha": "7870cf0",
   "gate_threshold_ms": 200.0,
   "gate_pass": true,
   "hooks": {
     "session_start": {
       "label": "session_start",
-      "runs": 50,
-      "p50": 84.6,
-      "p95": 95.37,
-      "p99": 96.28,
-      "min": 70.72,
-      "max": 96.28,
-      "mean": 84.5,
+      "runs": 100,
+      "p50": 83.97,
+      "p95": 100.16,
+      "p99": 113.68,
+      "min": 75.71,
+      "max": 179.24,
+      "mean": 86.0,
       "nonzero_exits": 0
     },
     "user_prompt": {
       "label": "user_prompt",
-      "runs": 50,
-      "p50": 113.38,
-      "p95": 143.92,
-      "p99": 146.73,
-      "min": 64.81,
-      "max": 146.73,
-      "mean": 105.67,
+      "runs": 100,
+      "p50": 107.9,
+      "p95": 187.16,
+      "p99": 195.63,
+      "min": 59.0,
+      "max": 216.08,
+      "mean": 108.83,
       "nonzero_exits": 0
     }
   },
-  "log_file": "/tmp/tinm-bench-DToybG/bench.log"
+  "log_file": "/tmp/tinm-bench-QMSmj1/bench.log"
 }

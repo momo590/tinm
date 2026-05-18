@@ -266,7 +266,14 @@ def _maybe_emit_pending_digest_and_relaunch(
 def _update_turn_and_get_hint(
     thread_id: str, prompt_text: str, emit_hint: bool, session_id: str
 ) -> tuple[str, int]:
-    """Append turn (hot path) + return (hint_text, turn_count)."""
+    """Append turn (hot path) + return (hint_text, turn_count).
+
+    We pass `dispatch_worker=False` so update_thread does NOT Popen the
+    anchor worker. The hot path spawns ONE consolidated dispatcher
+    (_hot_path_dispatch.py) at the end that runs anchor + score_and_flush
+    + push_throttle in one child process — saves two fork+execs vs the
+    pre-v0.3.0 layout where each was its own Popen.
+    """
     try:
         from tinm_update import update_thread
         result = update_thread(
@@ -276,6 +283,7 @@ def _update_turn_and_get_hint(
             client="claude-code",
             emit_hint=emit_hint,
             session_id=session_id,
+            dispatch_worker=False,
         )
         return result.get("hint_text") or "", int(result.get("turn") or 0)
     except Exception as exc:
@@ -283,35 +291,35 @@ def _update_turn_and_get_hint(
         return "", 0
 
 
-def _spawn_score_and_flush(
+def _spawn_background_dispatch(
     thread_id: str, session_id: str, prompt_text: str, turn: int
 ) -> None:
-    """Detached score_and_flush — calls tinm_artifact.cmd_add which lazy-loads
-    sentence-transformers (~5s). MUST stay async."""
-    script = SKILL_DIR / "tinm_assistant_capture.py"
-    if not script.is_file() or not VENV_PY.is_file() or not session_id:
-        return
-    args = [
-        str(VENV_PY),
-        str(script),
-        "score_and_flush",
-        "--thread-id", thread_id,
-        "--session-id", session_id,
-        "--prompt", prompt_text,
-    ]
-    if turn > 0:
-        args += ["--next-turn", str(turn)]
-    _detach_spawn(args)
-
-
-def _spawn_push_throttle() -> None:
-    """Detached git push for Phase 2 sync."""
-    if not (TINM_PCP_DIR / ".git").is_dir():
-        return
-    script = SKILL_DIR / "push_throttle.py"
+    """One Popen for the three async tasks: anchor worker, score_and_flush,
+    push_throttle. All three run in the same detached child process so
+    the parent hot path pays exactly ONE fork+exec, not three.
+    """
+    script = SKILL_DIR / "_hot_path_dispatch.py"
     if not script.is_file() or not VENV_PY.is_file():
         return
-    _detach_spawn([str(VENV_PY), str(script), "schedule", str(TINM_PCP_DIR)])
+
+    args: list[str] = [str(VENV_PY), str(script)]
+    if turn > 0:
+        args += ["--anchor", thread_id, str(turn)]
+        if session_id:
+            args += ["--session-id", session_id]
+    if session_id:
+        args += [
+            "--score-and-flush", thread_id, session_id, prompt_text,
+        ]
+        if turn > 0:
+            args += ["--next-turn", str(turn)]
+    if (TINM_PCP_DIR / ".git").is_dir():
+        args += ["--push", str(TINM_PCP_DIR)]
+
+    # Nothing to do? Skip the spawn entirely.
+    if len(args) <= 2:
+        return
+    _detach_spawn(args)
 
 
 def main() -> int:
@@ -365,8 +373,7 @@ def main() -> int:
     if hint:
         out_chunks.append(hint)
 
-    _spawn_score_and_flush(thread_id, session_id, prompt_text, turn_count)
-    _spawn_push_throttle()
+    _spawn_background_dispatch(thread_id, session_id, prompt_text, turn_count)
 
     if out_chunks:
         sys.stdout.write("\n".join(out_chunks) + "\n")
