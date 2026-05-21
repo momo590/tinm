@@ -66,9 +66,65 @@ CHAT_THREAD_FILE = TINM_HOME / "chat-thread"
 CHAT_THREAD_SLUG_BASE = "claude-desktop-chat"
 
 
+def _n_user_turns(thread_data: dict) -> int:
+    """Count user-role turns in a thread's trajectory.
+
+    A thread with zero user turns is, by definition, either a fresh
+    auto-create (SessionStart hook, cron, autopilot) or an init-only
+    thread that the user never wrote into. Either way it is not
+    "substantive" — we should not resume into it when a real thread
+    exists.
+    """
+    traj = thread_data.get("trajectory") or []
+    return sum(1 for t in traj if t.get("role") == "user")
+
+
+def _thread_relevance_score(
+    thread_data: dict, slug: str
+) -> tuple[int, str, int, str]:
+    """Build a sortable relevance tuple for a thread.
+
+    Tuple shape (all DESC sort): `(is_substantive, last_updated,
+    n_user_turns, slug)`. A higher tuple wins. Components:
+
+      - `is_substantive` (0/1): the substance gate — a thread is
+        substantive iff it has ≥ 1 user turn AND `last_updated` ≠
+        `created_at`. The two conditions together rule out the
+        SessionStart auto-creates spawned by cron / autopilot runs
+        from `/root` or `/tmp` (cause 2a of the most-recent-thread
+        bug).
+      - `last_updated` (ISO8601 string, lexicographic): the wall-clock
+        recency we still want as the primary signal among substantive
+        threads.
+      - `n_user_turns` (int): tiebreaker when two threads share the
+        same `last_updated` second — a multi-turn thread always beats
+        an empty-trajectory autocreate at the same second (cause 2b).
+      - `slug` (str): deterministic final tiebreaker — replaces the
+        ext4-hash-order glob() fallback that previously made selection
+        non-reproducible across runs.
+
+    Pulled out as a helper so the read-path resolver can adopt the
+    same ranking once we wire it in (intentionally not done in this
+    commit to keep the diff narrow).
+    """
+    meta = thread_data.get("metadata") or {}
+    last_updated = meta.get("last_updated") or ""
+    created_at = meta.get("created_at") or ""
+    n_user = _n_user_turns(thread_data)
+    is_substantive = 1 if (n_user > 0 and last_updated != created_at) else 0
+    return (is_substantive, last_updated, n_user, slug)
+
+
 def _most_recent_thread() -> str | None:
-    """Return the slug of the thread with the most recent
-    `metadata.last_updated`, or None if no threads exist on disk.
+    """Return the slug of the most relevant thread on disk, or None
+    when there are no threads at all.
+
+    Ranking is delegated to `_thread_relevance_score`, which applies a
+    substance gate (skip empty autocreates), a deterministic tiebreaker
+    (n_user_turns then slug) and the wall-clock recency we already
+    want. Falls back to a non-substantive autocreate only when no
+    substantive thread exists — so a fresh install with one
+    SessionStart-spawned thread still resolves cleanly.
 
     Used as the v0.2.3+ fallback when the legacy CURRENT_FILE pointer
     has been retired by the migration and the MCP client (Claude.ai
@@ -76,16 +132,16 @@ def _most_recent_thread() -> str | None:
     """
     if not THREADS_DIR.exists():
         return None
+    best: tuple | None = None
     best_slug: str | None = None
-    best_ts: str = ""
     for path in THREADS_DIR.glob("*.json"):
         try:
             data = json.loads(path.read_text())
         except (json.JSONDecodeError, OSError):
             continue
-        ts = (data.get("metadata") or {}).get("last_updated", "")
-        if ts > best_ts:
-            best_ts, best_slug = ts, path.stem
+        score = _thread_relevance_score(data, path.stem)
+        if best is None or score > best:
+            best, best_slug = score, path.stem
     return best_slug
 
 
