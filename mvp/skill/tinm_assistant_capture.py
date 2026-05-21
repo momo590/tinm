@@ -188,16 +188,28 @@ def score_and_flush(thread_id: str, session_id: str, user_prompt: str,
     """
     buf = read_buffer(session_id)
     if buf is None:
+        log_event("capture_pipeline_exit", {
+            "reason": "no_buffer",
+            "thread_id": (thread_id or "")[:32],
+        })
         return {"decision": "no_buffer", "signal_w": 0.0, "label": "no_buffer"}
 
     age = time.time() - float(buf.get("ts", 0))
     if age > BUFFER_STALE_SECONDS:
         clear_buffer(session_id)
+        log_event("capture_pipeline_exit", {
+            "reason": "stale_discard",
+            "thread_id": (thread_id or "")[:32],
+        })
         return {"decision": "stale_discard", "signal_w": 0.0,
                 "label": "stale", "age_s": age}
 
     if buf.get("thread_id") and thread_id and buf["thread_id"] != thread_id:
         clear_buffer(session_id)
+        log_event("capture_pipeline_exit", {
+            "reason": "thread_mismatch",
+            "thread_id": (thread_id or "")[:32],
+        })
         return {"decision": "thread_mismatch", "signal_w": 0.0,
                 "label": "orphan"}
 

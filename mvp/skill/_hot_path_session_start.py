@@ -174,6 +174,56 @@ def _load_thread_context(thread_id: str) -> str | None:
         return None
 
 
+def _emit_context_injected_telemetry(thread_id: str, ctx: str) -> None:
+    """Best-effort telemetry for the cross-session memory value path.
+
+    SessionStart context injection is *the* mechanism that gives Claude
+    cross-session continuity (see _hot_path_session_start.main → ctx ↦
+    out_chunks). Before this hook, that path was invisible to telemetry,
+    so we had no way to demonstrate value or detect regressions in the
+    anchor/render pipeline.
+
+    Payload is metadata-only — never raw ctx content. Schema enforced by
+    tinm_telemetry._validate_payload (truncates strings to 64 chars,
+    drops unknown fields).
+    """
+    try:
+        from tinm_telemetry import log_event
+    except Exception as exc:
+        _log(f"telemetry import failed: {exc!r}")
+        return
+
+    threads_dir = TINM_PCP_DIR / "threads"
+    artifacts_dir = TINM_PCP_DIR / "artifacts"
+
+    trajectory_turns = 0
+    anchor_terms_count = 0
+    try:
+        thread = json.loads((threads_dir / f"{thread_id}.json").read_text())
+        trajectory_turns = len(thread.get("trajectory", []))
+        anchor_terms_count = len(thread.get("anchor", {}).get("top_terms", []))
+    except Exception as exc:
+        _log(f"telemetry: thread read failed: {exc!r}")
+
+    has_artifacts = False
+    try:
+        arts = json.loads((artifacts_dir / f"{thread_id}.json").read_text())
+        has_artifacts = len(arts.get("artifacts", [])) > 0
+    except Exception:
+        pass
+
+    try:
+        log_event("session_context_injected", {
+            "thread_id": thread_id[:32],
+            "ctx_chars": len(ctx),
+            "trajectory_turns": trajectory_turns,
+            "anchor_terms_count": anchor_terms_count,
+            "has_artifacts": has_artifacts,
+        })
+    except Exception as exc:
+        _log(f"telemetry log_event failed: {exc!r}")
+
+
 def _append_journal_entry(thread_id: str) -> None:
     """Per-host journal-<host>.jsonl entry. Mirrors what the previous
     bash heredoc did, inline so we save a python invocation."""
@@ -194,7 +244,11 @@ def _append_journal_entry(thread_id: str) -> None:
     n_art = 0
     try:
         arts = json.loads((artifacts_dir / f"{thread_id}.json").read_text())
-        n_art = len(arts)
+        # `arts` is the full PCP v0 envelope:
+        #     {"pcp_version": ..., "thread_id": ..., "artifacts": [...]}
+        # Pre-2026-05-21 we wrote `len(arts)` which returned 3 (the top-level
+        # key count), masking Bug #2. Always count the inner array.
+        n_art = len(arts.get("artifacts", []))
     except Exception:
         pass
 
@@ -243,6 +297,7 @@ def main() -> int:
     ctx = _load_thread_context(thread_id)
     if ctx:
         out_chunks.append(ctx)
+        _emit_context_injected_telemetry(thread_id, ctx)
 
     _append_journal_entry(thread_id)
 

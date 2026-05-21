@@ -32,8 +32,9 @@ import sys
 import time
 import uuid
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Iterable, Literal
 
 SCHEMA_VERSION = 1
 TELEMETRY_FILE = Path.home() / ".tinm" / "telemetry.jsonl"
@@ -47,6 +48,8 @@ EventType = Literal[
     "user_explicit_action",
     "approval_signal_classified",
     "assistant_turn_captured",
+    "session_context_injected",
+    "capture_pipeline_exit",
 ]
 
 EVENT_FIELDS: dict[str, set[str]] = {
@@ -57,6 +60,14 @@ EVENT_FIELDS: dict[str, set[str]] = {
     "user_explicit_action": {"action"},
     "approval_signal_classified": {"label", "signal_w", "thread_id"},
     "assistant_turn_captured": {"decision", "signal_w", "thread_id"},
+    "session_context_injected": {
+        "thread_id",
+        "ctx_chars",
+        "trajectory_turns",
+        "anchor_terms_count",
+        "has_artifacts",
+    },
+    "capture_pipeline_exit": {"reason", "thread_id"},
 }
 
 ALLOWED_PAYLOAD_TYPES = (str, int, float, bool, type(None))
@@ -191,54 +202,70 @@ def measure_latency(hook_name: str):
 # Aggregation & export
 # ---------------------------------------------------------------------------
 
-def export_aggregates() -> dict[str, Any]:
-    """Compute aggregates suitable for sharing — never raw events.
+def _percentile(vals: list[float], p: float) -> float:
+    if not vals:
+        return 0.0
+    vals = sorted(vals)
+    k = int(round((len(vals) - 1) * p))
+    return vals[k]
+
+
+def _iter_events() -> Iterable[dict[str, Any]]:
+    """Yield parsed events from TELEMETRY_FILE, skipping malformed lines."""
+    if not TELEMETRY_FILE.exists():
+        return
+    with TELEMETRY_FILE.open() as f:
+        for line in f:
+            try:
+                yield json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+
+def _aggregate_events(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    """Reduce an iterable of events into the standard aggregate shape.
 
     Output contains: counts per event_type, latency p50/p95 per hook,
     sums of `tokens_avoided_estimated`, action-name frequency. No
-    `thread_id`, no raw payloads, no timestamps.
+    `thread_id`, no raw payloads, no timestamps. Identical shape to
+    `export_aggregates()`'s output (minus the top-level install_id/
+    schema_version stamps, which the public exporter adds).
     """
-    if not TELEMETRY_FILE.exists():
-        return {"events_total": 0}
-
     counts: dict[str, int] = {}
     tokens_saved_total = 0
     digest_count = 0
     digest_turns_compressed_total = 0
     cross_session_hits = 0
+    session_context_injections = 0
+    capture_pipeline_exits: dict[str, int] = {}
     latency_samples: dict[str, list[float]] = {}
     user_actions: dict[str, int] = {}
 
-    with TELEMETRY_FILE.open() as f:
-        for line in f:
-            try:
-                ev = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            t = ev.get("type", "?")
-            counts[t] = counts.get(t, 0) + 1
+    for ev in events:
+        t = ev.get("type", "?")
+        counts[t] = counts.get(t, 0) + 1
 
-            if t == "tokens_saved_estimated":
-                tokens_saved_total += int(ev.get("tokens_avoided_estimated", 0))
-            elif t == "digest_injection":
-                digest_count += 1
-                digest_turns_compressed_total += int(ev.get("turns_compressed", 0))
-            elif t == "cross_session_hit":
-                cross_session_hits += 1
-            elif t == "latency_added_ms":
-                latency_samples.setdefault(ev.get("hook", "?"), []).append(
-                    float(ev.get("duration_ms", 0))
-                )
-            elif t == "user_explicit_action":
-                action = ev.get("action", "?")
-                user_actions[action] = user_actions.get(action, 0) + 1
-
-    def _percentile(vals: list[float], p: float) -> float:
-        if not vals:
-            return 0.0
-        vals = sorted(vals)
-        k = int(round((len(vals) - 1) * p))
-        return vals[k]
+        if t == "tokens_saved_estimated":
+            tokens_saved_total += int(ev.get("tokens_avoided_estimated", 0))
+        elif t == "digest_injection":
+            digest_count += 1
+            digest_turns_compressed_total += int(ev.get("turns_compressed", 0))
+        elif t == "cross_session_hit":
+            cross_session_hits += 1
+        elif t == "session_context_injected":
+            session_context_injections += 1
+        elif t == "capture_pipeline_exit":
+            reason = ev.get("reason", "?")
+            capture_pipeline_exits[reason] = (
+                capture_pipeline_exits.get(reason, 0) + 1
+            )
+        elif t == "latency_added_ms":
+            latency_samples.setdefault(ev.get("hook", "?"), []).append(
+                float(ev.get("duration_ms", 0))
+            )
+        elif t == "user_explicit_action":
+            action = ev.get("action", "?")
+            user_actions[action] = user_actions.get(action, 0) + 1
 
     latency_summary = {
         hook: {
@@ -250,22 +277,190 @@ def export_aggregates() -> dict[str, Any]:
     }
 
     return {
-        "install_id": _read_config().get("install_id"),
-        "schema_version": SCHEMA_VERSION,
         "events_total": sum(counts.values()),
         "event_counts": counts,
         "tokens_saved_total": tokens_saved_total,
         "cross_session_hits": cross_session_hits,
         "digest_injections": digest_count,
         "digest_turns_compressed_total": digest_turns_compressed_total,
+        "session_context_injections": session_context_injections,
+        "capture_pipeline_exits": capture_pipeline_exits,
         "latency_by_hook": latency_summary,
         "user_actions": user_actions,
     }
 
 
-def export_json(out_path: Path | str) -> Path:
+def export_aggregates() -> dict[str, Any]:
+    """Compute aggregates suitable for sharing — never raw events.
+
+    Output contains: counts per event_type, latency p50/p95 per hook,
+    sums of `tokens_avoided_estimated`, action-name frequency. No
+    `thread_id`, no raw payloads, no timestamps.
+
+    Backwards-compatible: shape unchanged across the v0.2.x telemetry
+    schema. If you need era-segmented metrics (e.g. to separate a
+    pre/post-refactor regression window), use `export_aggregates_by_era`.
+    """
+    if not TELEMETRY_FILE.exists():
+        return {"events_total": 0}
+
+    agg = _aggregate_events(_iter_events())
+    return {
+        "install_id": _read_config().get("install_id"),
+        "schema_version": SCHEMA_VERSION,
+        **agg,
+    }
+
+
+def _parse_boundary(b: str) -> float:
+    """Parse an ISO-8601 boundary string into a POSIX timestamp (UTC).
+
+    Accepts both `2026-05-17T00:00:00Z` and `2026-05-17T00:00:00+00:00`.
+    Naive datetimes are interpreted as UTC. Raises ValueError on garbage
+    input — surfaced loudly because boundaries are user-supplied config
+    and a silent parse failure would produce silently wrong eras.
+    """
+    s = b.strip()
+    # datetime.fromisoformat doesn't accept "Z" suffix until Py3.11; normalize.
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    dt = datetime.fromisoformat(s)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.timestamp()
+
+
+def _era_name(idx: int, boundaries_iso: list[str]) -> str:
+    """Stable, human-readable era label.
+
+    - 0 boundaries        → "all"
+    - N boundaries, i=0   → "pre-<b0>"
+    - N boundaries, i=N   → "post-<b{N-1}>"
+    - otherwise           → "<b{i-1}>-to-<b{i}>"
+
+    The label uses the date-only prefix of each boundary when the time
+    component is midnight (cosmetic; aggregates are unaffected).
+    """
+    def _short(b: str) -> str:
+        s = b.strip()
+        # If the boundary lands at midnight UTC, show just the date.
+        for tail in ("T00:00:00Z", "T00:00:00+00:00"):
+            if s.endswith(tail):
+                return s[: -len(tail)]
+        return s
+
+    if not boundaries_iso:
+        return "all"
+    if idx == 0:
+        return f"pre-{_short(boundaries_iso[0])}"
+    if idx == len(boundaries_iso):
+        return f"post-{_short(boundaries_iso[-1])}"
+    return f"{_short(boundaries_iso[idx - 1])}-to-{_short(boundaries_iso[idx])}"
+
+
+def export_aggregates_by_era(
+    boundaries: list[str] | None = None,
+) -> dict[str, Any]:
+    """Aggregate events both globally and segmented by era boundaries.
+
+    `boundaries` is a list of ISO-8601 timestamps (e.g. `"2026-05-17T00:00:00Z"`).
+    N boundaries produce N+1 eras. Events with a timestamp `ts < boundaries[i]`
+    fall into era i; events with `ts >= boundaries[-1]` fall into the final era.
+    Boundaries are sorted ascending automatically (forgiving for human input).
+
+    Output:
+      {
+        "install_id": ...,
+        "schema_version": SCHEMA_VERSION,
+        "boundaries": [ ... sorted ISO strings ... ],
+        "eras": [
+          {"name": "pre-2026-05-17", "events_total": ..., "latency_by_hook": {...}, ...},
+          {"name": "post-2026-05-17", "events_total": ..., "latency_by_hook": {...}, ...}
+        ],
+        "combined": { ... same shape as export_aggregates() ... }
+      }
+
+    The `combined` block matches `export_aggregates()` byte-for-byte
+    (modulo dict ordering) so existing consumers can keep reading it.
+    Era segmentation is derived from the existing `ts` field — no new
+    event metadata captured, so SCHEMA_VERSION does not bump.
+
+    Why not segment by `install_id`?  A single install can span a code
+    upgrade (e.g. pre/post v0.3.0 hot-path refactor on the same machine).
+    Time-boundary segmentation is the only way to honestly separate
+    those eras.
+    """
+    boundaries = list(boundaries or [])
+    # Sort defensively — accept human-provided lists in any order.
+    sorted_boundaries = sorted(boundaries, key=_parse_boundary)
+    boundary_ts = [_parse_boundary(b) for b in sorted_boundaries]
+
+    # One bucket per era; events also flow into a "combined" bucket so we
+    # only walk the JSONL once.
+    era_buckets: list[list[dict[str, Any]]] = [[] for _ in range(len(sorted_boundaries) + 1)]
+    combined_bucket: list[dict[str, Any]] = []
+
+    for ev in _iter_events():
+        combined_bucket.append(ev)
+        ts = ev.get("ts")
+        # Events missing/non-numeric ts cannot be segmented; bucket them
+        # into era 0 so we never silently drop data, but they will not
+        # corrupt later eras.
+        if not isinstance(ts, (int, float)):
+            era_buckets[0].append(ev)
+            continue
+        placed = False
+        for i, b_ts in enumerate(boundary_ts):
+            if ts < b_ts:
+                era_buckets[i].append(ev)
+                placed = True
+                break
+        if not placed:
+            era_buckets[-1].append(ev)
+
+    eras = [
+        {"name": _era_name(i, sorted_boundaries), **_aggregate_events(bucket)}
+        for i, bucket in enumerate(era_buckets)
+    ]
+
+    combined_agg = _aggregate_events(combined_bucket)
+    combined = {
+        "install_id": _read_config().get("install_id"),
+        "schema_version": SCHEMA_VERSION,
+        **combined_agg,
+    }
+    # If the telemetry file does not exist, mirror export_aggregates'
+    # minimal output for the combined block.
+    if not TELEMETRY_FILE.exists():
+        combined = {"events_total": 0}
+
+    return {
+        "install_id": _read_config().get("install_id"),
+        "schema_version": SCHEMA_VERSION,
+        "boundaries": sorted_boundaries,
+        "eras": eras,
+        "combined": combined,
+    }
+
+
+def export_json(
+    out_path: Path | str,
+    *,
+    boundaries: list[str] | None = None,
+) -> Path:
+    """Write an aggregate export to `out_path`.
+
+    If `boundaries` is non-empty, the file contains the era-segmented
+    payload (with `eras` + `combined`). Otherwise it contains the
+    classic `export_aggregates()` payload for backwards compatibility.
+    """
     out = Path(out_path)
-    out.write_text(json.dumps(export_aggregates(), indent=2))
+    payload: dict[str, Any]
+    if boundaries:
+        payload = export_aggregates_by_era(boundaries)
+    else:
+        payload = export_aggregates()
+    out.write_text(json.dumps(payload, indent=2))
     return out
 
 
@@ -275,8 +470,45 @@ def export_json(out_path: Path | str) -> Path:
 
 USAGE = (
     "usage: tinm_telemetry.py [status | on [--share] | off | purge |\n"
-    "                          export <path> | install]\n"
+    "                          export <path> [--era-boundary ISO_TS ...] |\n"
+    "                          install]\n"
+    "\n"
+    "  --era-boundary YYYY-MM-DDTHH:MM:SSZ  Segment latency/counts by era.\n"
+    "                                       May be repeated; produces N+1 eras.\n"
 )
+
+
+def _parse_export_args(args: list[str]) -> tuple[Path, list[str]]:
+    """Pull `<path>` and any `--era-boundary <iso>` pairs out of args.
+
+    Order-independent. Anything left over is treated as the output path
+    (first positional wins; default = tinm_telemetry_export.json).
+    Boundary values are validated via `_parse_boundary` — invalid
+    timestamps raise ValueError up to `cli()` which catches and prints.
+    """
+    boundaries: list[str] = []
+    positional: list[str] = []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "--era-boundary":
+            if i + 1 >= len(args):
+                raise ValueError("--era-boundary requires a value")
+            value = args[i + 1]
+            _parse_boundary(value)  # validate now, fail loud
+            boundaries.append(value)
+            i += 2
+            continue
+        if a.startswith("--era-boundary="):
+            value = a.split("=", 1)[1]
+            _parse_boundary(value)
+            boundaries.append(value)
+            i += 1
+            continue
+        positional.append(a)
+        i += 1
+    out = Path(positional[0]) if positional else Path("tinm_telemetry_export.json")
+    return out, boundaries
 
 
 def cli(args: list[str]) -> int:
@@ -298,9 +530,16 @@ def cli(args: list[str]) -> int:
         print("telemetry data purged.")
         return 0
     if args[0] == "export":
-        out = Path(args[1]) if len(args) > 1 else Path("tinm_telemetry_export.json")
-        export_json(out)
-        print(f"aggregates written to {out}")
+        try:
+            out, boundaries = _parse_export_args(args[1:])
+        except ValueError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
+        export_json(out, boundaries=boundaries or None)
+        if boundaries:
+            print(f"era-segmented aggregates ({len(boundaries) + 1} eras) written to {out}")
+        else:
+            print(f"aggregates written to {out}")
         return 0
     if args[0] == "install":
         install_opt_in_interactive()
