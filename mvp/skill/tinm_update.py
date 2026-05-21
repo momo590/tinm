@@ -98,20 +98,113 @@ _ANAPHORIC_TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Meta-turns ask to resume / continue the prior topic. They should not
+# contribute their own tokens to top_terms (otherwise "continue" / "reprends"
+# pollute the bag); instead they boost the most recent non-meta user turn,
+# because that's where the actual current topic lives.
+_META_TURN_RE = re.compile(
+    r"\b("
+    # English
+    r"resume|resumes|resuming|"
+    r"continue|continues|continuing|"
+    r"where\s+were\s+we|"
+    r"let'?s\s+continue|let'?s\s+resume|"
+    r"pick\s+up\s+where|"
+    r"keep\s+going|"
+    # French
+    r"reprends?|reprenons|reprennent|"
+    r"recommenc\w+|"
+    r"continuons|continuez|"
+    r"on\s+reprend|on\s+continue|"
+    r"résume|résumons|resume\s+stp"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _is_meta_turn(text: str) -> bool:
+    """True if the turn is a 'resume/continue prior topic' meta-prompt.
+
+    Meta-turns are typically short ("on reprend", "reprends en autopilot",
+    "where were we"). We don't constrain by length because longer messages
+    like "ok reprends sur le sujet TINM mais avec X précisions" still
+    qualify — the leading verb is the signal.
+    """
+    return bool(_META_TURN_RE.search(text))
+
 
 # ---------------------------------------------------------------------------
 # Pure helpers (no embedding, cheap).
 # ---------------------------------------------------------------------------
-def _top_query_terms(trajectory: list[dict], n: int = 5) -> list[str]:
-    """Top N non-stopword terms by frequency across all user queries."""
+_TOP_TERMS_DECAY = 0.85
+_META_BOOST = 5.0
+
+
+def _top_query_terms(
+    trajectory: list[dict],
+    n: int = 5,
+    *,
+    decay: float = _TOP_TERMS_DECAY,
+) -> list[str]:
+    """Top N non-stopword terms across user queries, weighted by recency,
+    length-normalized per turn, with meta-turn handling.
+
+    Three corrections over a flat bag-of-words (see project_tinm_anchor_recency_bug):
+
+    * **Recency:** each turn's contribution is multiplied by ``decay**(last-i)``,
+      where ``last`` is the index of the most recent non-meta user turn. A
+      topic from 4 turns ago therefore weighs ~52% of one from the latest turn.
+    * **Length normalization:** every token in a turn contributes ``1/L`` where
+      ``L`` is the total non-stopword token count in that turn — so each
+      non-meta turn's contributions sum to exactly 1.0 before recency. A
+      pasted 600-line brief stops mechanically swamping shorter prompts.
+    * **Meta-turn handling:** a query like "reprends", "on continue", "where
+      were we" contributes nothing itself, and instead boosts the most recent
+      prior non-meta user turn by ``_META_BOOST``× — because that's where the
+      user's current topic actually lives. Stacked meta-turns stack the boost.
+
+    Returns the top-N terms by floating-point weight (ties broken by first
+    occurrence, courtesy of ``Counter.most_common``).
+    """
     from collections import Counter
+
+    user_turns = [t for t in trajectory if t.get("role") == "user"]
+    if not user_turns:
+        return []
+
+    boosts = [1.0] * len(user_turns)
+    is_meta = [False] * len(user_turns)
+    for i, t in enumerate(user_turns):
+        if _is_meta_turn(t.get("text") or ""):
+            is_meta[i] = True
+            boosts[i] = 0.0
+            for j in range(i - 1, -1, -1):
+                if not is_meta[j]:
+                    boosts[j] *= _META_BOOST
+                    break
+
+    # Anchor recency on the most recent NON-meta user turn so the meta query
+    # at the end of the trajectory doesn't itself become the new "now". If
+    # everything is meta (degenerate), fall back to the absolute last turn.
+    non_meta_idx = [i for i in range(len(user_turns)) if not is_meta[i]]
+    last_idx = non_meta_idx[-1] if non_meta_idx else len(user_turns) - 1
+
     counts: Counter = Counter()
-    for turn in trajectory:
-        if turn.get("role") != "user":
+    for i, t in enumerate(user_turns):
+        if boosts[i] == 0.0:
             continue
-        for w in re.findall(r"\b[a-zA-Z][a-zA-Z0-9_]*\b", turn["text"].lower()):
-            if w not in _STOPWORDS and len(w) > 2:
-                counts[w] += 1
+        tokens = [
+            w for w in re.findall(r"\b[a-zA-Z][a-zA-Z0-9_]*\b", (t.get("text") or "").lower())
+            if w not in _STOPWORDS and len(w) > 2
+        ]
+        if not tokens:
+            continue
+        per_token = 1.0 / len(tokens)
+        recency = decay ** max(0, last_idx - i)
+        turn_weight = boosts[i] * recency * per_token
+        for w in tokens:
+            counts[w] += turn_weight
+
     return [w for w, _ in counts.most_common(n)]
 
 
