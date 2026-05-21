@@ -36,18 +36,34 @@ _HERE = Path(__file__).resolve().parent
 _SKILL_DIR = _HERE.parent / "skill"
 sys.path.insert(0, str(_SKILL_DIR))
 
+import hashlib  # noqa: E402
 import os  # noqa: E402
 import json  # noqa: E402
+import socket  # noqa: E402
 
 import tinm_artifact  # noqa: E402  (sys.path tweak above is intentional)
 import tinm_init  # noqa: E402
 import tinm_load  # noqa: E402
 import tinm_update  # noqa: E402
-from tinm_paths import CURRENT_FILE, THREADS_DIR  # noqa: E402
+from tinm_paths import CURRENT_FILE, THREADS_DIR, TINM_HOME  # noqa: E402
 
 from mcp.server.fastmcp import FastMCP  # noqa: E402
 
 mcp = FastMCP("tinm")
+
+
+# Per-host pointer used as a last-resort fallback when a write-style MCP
+# call arrives without an explicit `thread_id` and the legacy
+# CURRENT_FILE pointer is absent (the v0.2.3+ default). Claude Desktop
+# chat fits exactly this profile — there is no cwd, no SessionStart
+# hook, and the chat tab cannot persist a slug across messages. We
+# auto-create one chat thread per host, persist its slug here, and
+# reuse it for every chat-only write. This file is intentionally NOT
+# the resurrected `CURRENT_FILE` — it is read only inside the chat
+# fallback, never by the read resolver, so it cannot pollute project
+# threads across cwds.
+CHAT_THREAD_FILE = TINM_HOME / "chat-thread"
+CHAT_THREAD_SLUG_BASE = "claude-desktop-chat"
 
 
 def _most_recent_thread() -> str | None:
@@ -124,21 +140,108 @@ def _resolve_thread_id(thread_id: str | None) -> str:
     )
 
 
+def _looks_like_chat_thread(path: Path) -> bool:
+    """Heuristic: does this thread JSON look like an auto-created chat thread?
+
+    Used by `_ensure_chat_thread` to decide whether a thread at the
+    bare slug `claude-desktop-chat` is ours (safe to reuse) or a
+    user-claimed project (must disambiguate).
+    """
+    try:
+        data = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    meta = data.get("metadata") or {}
+    if meta.get("project_root") is not None:
+        return False
+    title = str(meta.get("title") or "")
+    return title.startswith("Claude Desktop")
+
+
+def _persist_chat_thread_slug(slug: str) -> None:
+    """Write `slug` to `~/.tinm/chat-thread` (best-effort, mkdir -p)."""
+    try:
+        CHAT_THREAD_FILE.parent.mkdir(parents=True, exist_ok=True)
+        CHAT_THREAD_FILE.write_text(slug + "\n")
+    except OSError:
+        # The pointer is a perf hint, not state of record. If we can't
+        # write it, the next call will pay the "find by slug" cost and
+        # try again — never raise from this helper.
+        pass
+
+
+def _ensure_chat_thread() -> str:
+    """Resolve (and lazily create) the per-host Claude Desktop chat thread.
+
+    Read order:
+      1. `~/.tinm/chat-thread` pointer (validated against disk).
+      2. If the bare slug `claude-desktop-chat` already exists AND
+         looks like one of our auto-creates (project_root=None,
+         title starts with "Claude Desktop"), reuse it. Otherwise
+         disambiguate with a 6-char hash of the hostname so the
+         resulting slug is deterministic per-host.
+      3. Create a fresh thread via `tinm_init.init_thread`. Origin
+         is "user", `project_root` is None, and the v0.2.3 global
+         pointer is deliberately NOT written.
+
+    Returns the slug. Raises only when we can neither read nor create
+    a thread — at which point the caller surfaces the underlying
+    error.
+    """
+    # Step 1: read the per-host pointer if it points at a real thread.
+    if CHAT_THREAD_FILE.is_file():
+        try:
+            existing = CHAT_THREAD_FILE.read_text().strip()
+        except OSError:
+            existing = ""
+        if existing and _thread_exists_on_disk(existing):
+            return existing
+
+    # Step 2: compute the chat slug for this host. If the bare slug
+    # is already taken by a *different* thread (a user project, say),
+    # disambiguate with a 6-char hash of the hostname. The resulting
+    # slug is deterministic per-host, so a re-creation attempt after
+    # pointer loss lands on the same name.
+    slug = CHAT_THREAD_SLUG_BASE
+    bare_path = THREADS_DIR / f"{slug}.json"
+    if bare_path.exists():
+        if _looks_like_chat_thread(bare_path):
+            _persist_chat_thread_slug(slug)
+            return slug
+        digest = hashlib.sha256(
+            socket.gethostname().encode("utf-8")
+        ).hexdigest()[:6]
+        slug = f"{CHAT_THREAD_SLUG_BASE}-{digest}"
+
+    # Step 3: if the (possibly disambiguated) slug already exists,
+    # it must be ours from a prior pointer-loss recovery — reuse.
+    if not _thread_exists_on_disk(slug):
+        tinm_init.init_thread(
+            slug,
+            title="Claude Desktop chat (auto)",
+            project_root=None,
+            write_current_pointer=False,
+        )
+    _persist_chat_thread_slug(slug)
+    return slug
+
+
 def _resolve_thread_id_for_write(thread_id: str | None) -> str:
     """Resolve a thread for a WRITE-style MCP call (record_turn,
     artifact_add, thread_init's default).
 
-    Stricter than the read resolver: refuses to fall back to
-    "most-recently-updated" when no explicit thread_id is given and the
-    MCP client offers no cwd context that maps to a project. Mutating
-    "whichever thread happens to be most recent" from Claude.ai chat
-    silently writes to the wrong thread; force the caller to be
-    explicit instead.
-
     Order:
       1. Explicit `thread_id` (validated).
-      2. Legacy CURRENT_FILE (validated).
-      3. Raise — do NOT auto-pick the most recent thread for writes.
+      2. Legacy CURRENT_FILE pointer (validated). Still consulted for
+         pre-v0.2.3 installs that haven't run the migration yet.
+      3. Per-host chat-thread fallback (lazy auto-create). This is
+         intentionally last-resort: it only fires when no explicit
+         slug AND no legacy pointer exist — i.e. exactly the
+         Claude.ai Desktop chat profile where there is no cwd hint
+         either. We deliberately do NOT auto-create chat threads when
+         a cwd resolver could have picked a project thread — the
+         per-cwd thread resolution lives upstream and writes the
+         explicit `thread_id` argument before we are reached.
     """
     if thread_id:
         if _thread_exists_on_disk(thread_id):
@@ -150,11 +253,7 @@ def _resolve_thread_id_for_write(thread_id: str | None) -> str:
         text = CURRENT_FILE.read_text().strip()
         if text and _thread_exists_on_disk(text):
             return text
-    raise ValueError(
-        "Write-style TINM call without explicit `thread_id`. Pass the "
-        "target thread slug — the MCP server will not silently mutate "
-        "the most-recently-updated thread."
-    )
+    return _ensure_chat_thread()
 
 
 @mcp.tool()
@@ -281,11 +380,20 @@ def record_turn(
         role=role,
         client=client,
     )
-    return (
-        f"turn {result['turn']}: α={result['alpha_used']:.3f}, "
-        f"L1_engaged={result['l1_engaged']}, "
-        f"engaged_so_far={result['engaged_so_far']}"
-    )
+    # Defensive formatting — v0.3.0 moved α / anchor_update_count
+    # ownership into the async worker, so `update_thread` no longer
+    # guarantees those keys. Surface what we have; never KeyError on
+    # the MCP boundary. (Pre-v0.3.0 sync path still returns them, so
+    # the format degrades to identical output on that codepath.)
+    alpha = result.get("alpha_used")
+    alpha_str = f"{alpha:.3f}" if isinstance(alpha, (int, float)) else "—"
+    parts = [
+        f"turn {result['turn']}",
+        f"α={alpha_str}",
+        f"L1_engaged={result.get('l1_engaged', '?')}",
+        f"engaged_so_far={result.get('engaged_so_far', '?')}",
+    ]
+    return ": ".join([parts[0], ", ".join(parts[1:])])
 
 
 @mcp.resource("tinm://current-thread")
