@@ -177,3 +177,44 @@ class TestTopQueryTerms:
         traj = [{"turn": 1, "role": "user", "text": "the and or but with in at"}]
         terms = _top_query_terms(traj, n=5)
         assert terms == []  # all stopwords filtered out
+
+
+# ---------------------------------------------------------------------------
+# Housekeeping 2026-06-04 — the hint must be bounded so a single giant prompt
+# can't balloon the injected context / .pending_hint cache to multi-MB.
+# ---------------------------------------------------------------------------
+
+from tinm_update import (  # noqa: E402
+    HINT_MAX_QUERIES,
+    HINT_QUERY_CHARS,
+    _truncate_hint_query,
+)
+
+
+class TestHintBounds:
+    def test_long_query_is_truncated(self):
+        giant = "x" * 100_000
+        thread = _thread([(1, giant), (2, "ok")])
+        result = _format_trajectory_hint(thread, current_turn=3)
+        assert giant not in result
+        assert len(result) < 2000  # nowhere near the 100k input
+        assert "…" in result
+
+    def test_truncate_collapses_whitespace_and_caps_length(self):
+        out = _truncate_hint_query("a\n\n   b\t c " + "z" * 1000)
+        assert "\n" not in out
+        assert len(out) <= HINT_QUERY_CHARS + 1  # +1 for the ellipsis
+
+    def test_only_recent_queries_kept_with_omission_count(self):
+        turns = [(n, f"question {n}") for n in range(1, HINT_MAX_QUERIES + 6)]
+        thread = _thread(turns)
+        result = _format_trajectory_hint(thread, current_turn=999)
+        assert "earlier question(s) omitted" in result
+        # The oldest query must be dropped, the newest kept.
+        assert f"question {HINT_MAX_QUERIES + 5}" in result
+        assert "(1) question 1" not in result
+
+    def test_short_history_has_no_omission_notice(self):
+        thread = _thread([(1, "a"), (2, "b")])
+        result = _format_trajectory_hint(thread, current_turn=3)
+        assert "omitted" not in result

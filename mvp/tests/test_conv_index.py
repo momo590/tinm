@@ -226,3 +226,43 @@ def test_index_path_naming():
     p = tinm_conv_index._index_path("my-session-abc")
     assert "my-session-abc" in p.name
     assert p.suffix == ".jsonl"
+
+
+# ---------------------------------------------------------------------------
+# Housekeeping 2026-06-04 — retention on the NUMBER of per-session index
+# files (they accumulated to 1454 files / 19MB with no cleanup).
+# ---------------------------------------------------------------------------
+
+def test_prune_keeps_only_most_recent_session_files(tmp_path, monkeypatch):
+    import os
+    monkeypatch.setattr(tinm_conv_index, "MAX_SESSION_FILES", 3)
+    # Create 6 session files with increasing mtimes.
+    for i in range(6):
+        p = tmp_path / f"{tinm_conv_index.INDEX_PREFIX}sess{i}.jsonl"
+        p.write_text('{"turn_id":1}\n')
+        os.utime(p, (1000 + i, 1000 + i))
+    deleted = tinm_conv_index._prune_old_session_files()
+    remaining = sorted(p.name for p in tmp_path.glob(
+        f"{tinm_conv_index.INDEX_PREFIX}*.jsonl"))
+    assert deleted == 3
+    assert remaining == [
+        f"{tinm_conv_index.INDEX_PREFIX}sess3.jsonl",
+        f"{tinm_conv_index.INDEX_PREFIX}sess4.jsonl",
+        f"{tinm_conv_index.INDEX_PREFIX}sess5.jsonl",
+    ]
+
+
+def test_prune_noop_below_cap(tmp_path, monkeypatch):
+    monkeypatch.setattr(tinm_conv_index, "MAX_SESSION_FILES", 10)
+    for i in range(3):
+        (tmp_path / f"{tinm_conv_index.INDEX_PREFIX}s{i}.jsonl").write_text("{}\n")
+    assert tinm_conv_index._prune_old_session_files() == 0
+
+
+def test_add_turn_triggers_prune_on_new_session(tmp_path, monkeypatch):
+    monkeypatch.setattr(tinm_conv_index, "_encode", make_fake_embed)
+    monkeypatch.setattr(tinm_conv_index, "MAX_SESSION_FILES", 2)
+    for i in range(4):
+        tinm_conv_index.add_turn(f"new{i}", 1, "user", "hello world")
+    files = list(tmp_path.glob(f"{tinm_conv_index.INDEX_PREFIX}*.jsonl"))
+    assert len(files) <= 2

@@ -208,6 +208,21 @@ def _top_query_terms(
     return [w for w, _ in counts.most_common(n)]
 
 
+# Hint bounds. Keep recent queries only, truncate each — see the
+# housekeeping note inside _format_trajectory_hint. The same constants and
+# helper are mirrored in _anchor_worker (which deliberately duplicates this
+# formatter to stay import-light at worker time); keep them in lockstep.
+HINT_MAX_QUERIES = 12
+HINT_QUERY_CHARS = 240
+
+
+def _truncate_hint_query(text: str) -> str:
+    text = " ".join(text.split())  # collapse newlines/whitespace to one line
+    if len(text) > HINT_QUERY_CHARS:
+        return text[:HINT_QUERY_CHARS] + "…"
+    return text
+
+
 def _format_trajectory_hint(thread: dict, current_turn: int) -> str:
     """Format the TINM trajectory hint for stdout injection.
 
@@ -234,8 +249,16 @@ def _format_trajectory_hint(thread: dict, current_turn: int) -> str:
         ),
         "Prior questions this session:",
     ]
-    for turn_num, text in prior_queries:
-        lines.append(f"  ({turn_num}) {text}")
+    # Bound the hint: keep only the most recent queries, each truncated.
+    # An unbounded loop here let a single giant prompt (one observed at
+    # 4.3MB) balloon both the injected context and the .pending_hint cache
+    # file to multi-MB (housekeeping fix 2026-06-04). Recency is what L1
+    # cares about, so older queries are dropped with a count.
+    omitted = len(prior_queries) - HINT_MAX_QUERIES
+    if omitted > 0:
+        lines.append(f"  (… {omitted} earlier question(s) omitted)")
+    for turn_num, text in prior_queries[-HINT_MAX_QUERIES:]:
+        lines.append(f"  ({turn_num}) {_truncate_hint_query(text)}")
     return "\n".join(lines)
 
 

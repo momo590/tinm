@@ -23,6 +23,11 @@ from tinm_paths import BUFFER_DIR
 
 MAX_ENTRIES = 200
 INDEX_PREFIX = "conv_index-"
+# Retention on the NUMBER of per-session index files. Each file is already
+# capped at MAX_ENTRIES, but one file is created per session and nothing
+# deleted them — they accumulated to 1454 files / 19MB before this guard
+# (housekeeping 2026-06-04). Keep the most-recently-modified files only.
+MAX_SESSION_FILES = 300
 
 # Re-export scoring helpers at module level so tests (and callers) can
 # monkeypatch tinm_conv_index._encode / tinm_conv_index._cosine without having
@@ -40,6 +45,34 @@ except ImportError:
 
 def _index_path(session_id: str) -> Path:
     return BUFFER_DIR / f"{INDEX_PREFIX}{session_id}.jsonl"
+
+
+def _prune_old_session_files(keep: int | None = None) -> int:
+    """Delete the oldest conv_index session files beyond `keep`.
+
+    `keep` defaults to MAX_SESSION_FILES read at call time (so the module
+    constant can be overridden/tested). Cheap to call once per new session
+    (not per turn). Returns the number of files deleted. Best-effort:
+    filesystem errors are swallowed.
+    """
+    if keep is None:
+        keep = MAX_SESSION_FILES
+    try:
+        files = list(BUFFER_DIR.glob(f"{INDEX_PREFIX}*.jsonl"))
+    except OSError:
+        return 0
+    if len(files) <= keep:
+        return 0
+    # Oldest first by mtime; delete everything except the newest `keep`.
+    files.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0.0)
+    deleted = 0
+    for p in files[:-keep]:
+        try:
+            p.unlink(missing_ok=True)
+            deleted += 1
+        except OSError:
+            pass
+    return deleted
 
 
 def add_turn(
@@ -66,6 +99,10 @@ def add_turn(
         return
     BUFFER_DIR.mkdir(parents=True, exist_ok=True)
     path = _index_path(session_id)
+
+    # Whether this call creates a brand-new session index file — used below
+    # to enforce session-file retention once per session (not per turn).
+    is_new_session = not path.exists()
 
     # Load existing entries
     entries = _load(path)
@@ -109,6 +146,12 @@ def add_turn(
     except Exception:
         tmp.unlink(missing_ok=True)
         raise
+
+    # Enforce session-file retention after writing the new file so the
+    # just-created session is counted and kept (it has the newest mtime).
+    # Gated on new-session creation to keep this off the per-turn path.
+    if is_new_session:
+        _prune_old_session_files()
 
 
 def find(session_id: str, query: str, k: int = 3) -> list[dict]:

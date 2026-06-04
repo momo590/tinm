@@ -132,6 +132,19 @@ def _compute_alpha(
 # but runs at worker time (one turn LATER than the hot-path L1 path).
 # The hot path reads this hint on the next turn.
 # ---------------------------------------------------------------------------
+# Mirror of tinm_update.{HINT_MAX_QUERIES,HINT_QUERY_CHARS,_truncate_hint_query}.
+# Kept duplicated on purpose (this worker stays import-light) — keep in lockstep.
+HINT_MAX_QUERIES = 12
+HINT_QUERY_CHARS = 240
+
+
+def _truncate_hint_query(text: str) -> str:
+    text = " ".join(text.split())
+    if len(text) > HINT_QUERY_CHARS:
+        return text[:HINT_QUERY_CHARS] + "…"
+    return text
+
+
 def _format_trajectory_hint(thread: dict, current_turn: int) -> str:
     if not thread["anchor"].get("engaged_so_far"):
         return ""
@@ -154,8 +167,14 @@ def _format_trajectory_hint(thread: dict, current_turn: int) -> str:
         ),
         "Prior questions this session:",
     ]
-    for turn_num, text in prior_queries:
-        lines.append(f"  ({turn_num}) {text}")
+    # Bound the hint (housekeeping 2026-06-04): a single giant prompt used to
+    # balloon the .pending_hint cache to multi-MB. Keep recent queries only,
+    # each truncated; drop older ones with a count.
+    omitted = len(prior_queries) - HINT_MAX_QUERIES
+    if omitted > 0:
+        lines.append(f"  (… {omitted} earlier question(s) omitted)")
+    for turn_num, text in prior_queries[-HINT_MAX_QUERIES:]:
+        lines.append(f"  ({turn_num}) {_truncate_hint_query(text)}")
     return "\n".join(lines)
 
 
