@@ -292,3 +292,34 @@ class _FakeTTY:
 
     def read(self):
         return ""
+
+
+# ---------------------------------------------------------------------------
+# Bug A (2026-06-04) — SessionStart must maintain ~/.tinm/current_thread so
+# the Stop hook's documented fallback actually works for turns >= 2. Before
+# this, nothing wrote current_thread; on hosts missing it the Stop hook got
+# an empty thread after turn 1 and silently dropped every buffer write, so
+# capture went producer-side silent.
+# ---------------------------------------------------------------------------
+
+def test_persist_thread_handoff_writes_session_file(pcp_tree, tmp_path):
+    hp._persist_thread_handoff("sess-abc", "root-94a6b4")
+    session_file = tmp_path / "session-sess-abc.thread"
+    assert session_file.exists()
+    assert session_file.read_text().strip() == "root-94a6b4"
+
+
+def test_persist_thread_handoff_writes_current_thread_fallback(pcp_tree, tmp_path):
+    """The legacy fallback the Stop hook reads on turns >= 2."""
+    current = tmp_path / "current_thread"
+    assert not current.exists()
+    hp._persist_thread_handoff("sess-abc", "root-94a6b4")
+    assert current.exists()
+    assert current.read_text().strip() == "root-94a6b4"
+
+
+def test_persist_thread_handoff_refreshes_stale_current_thread(pcp_tree, tmp_path):
+    """A pre-existing current_thread pointing elsewhere is overwritten."""
+    (tmp_path / "current_thread").write_text("some-old-thread\n")
+    hp._persist_thread_handoff("sess-xyz", "root-94a6b4")
+    assert (tmp_path / "current_thread").read_text().strip() == "root-94a6b4"

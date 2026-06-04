@@ -350,27 +350,16 @@ def launch_anchor_worker_async(
     if not script.exists():
         return
 
-    # Single-flight pidfile check.
+    # Single-flight pidfile check (shared with the in-process dispatch path
+    # via _anchor_worker.anchor_worker_alive — one source of truth).
     tinm_home = Path(os.environ.get("TINM_HOME", str(Path.home() / ".tinm")))
     pidfile = tinm_home / f"anchor-worker-{thread_id}.pid"
-    if pidfile.is_file():
-        try:
-            existing_pid = int(pidfile.read_text().strip())
-            # /proc/<pid> exists iff the process is alive (Linux).
-            # On macOS /proc isn't there; fall back to os.kill(pid, 0).
-            alive = False
-            if Path(f"/proc/{existing_pid}").exists():
-                alive = True
-            else:
-                try:
-                    os.kill(existing_pid, 0)
-                    alive = True
-                except (ProcessLookupError, PermissionError):
-                    alive = False
-            if alive:
-                return  # another worker is already processing this thread
-        except (ValueError, OSError):
-            pass  # stale/corrupt pidfile — proceed to launch + overwrite
+    try:
+        from _anchor_worker import anchor_worker_alive
+        if anchor_worker_alive(thread_id):
+            return  # another worker is already processing this thread
+    except ImportError:
+        pass  # partial install — fall through and launch best-effort
 
     venv_py = Path.home() / ".tinm" / ".venv" / "bin" / "python"
     py = str(venv_py) if venv_py.is_file() else sys.executable

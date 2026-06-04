@@ -319,15 +319,66 @@ def run_worker(
     return 0
 
 
+def _pidfile_path(thread_id: str) -> Path:
+    tinm_home = Path(os.environ.get("TINM_HOME", str(Path.home() / ".tinm")))
+    return tinm_home / f"anchor-worker-{thread_id}.pid"
+
+
+def anchor_worker_alive(thread_id: str) -> bool:
+    """True iff a live anchor worker already owns this thread's pidfile.
+
+    Single source of truth for the single-flight guard, shared by the
+    Popen path (launch_anchor_worker_async) and the in-process dispatch
+    path (_hot_path_dispatch._run_anchor). A stale/corrupt pidfile reads
+    as not-alive so the caller proceeds and overwrites it.
+    """
+    pidfile = _pidfile_path(thread_id)
+    if not pidfile.is_file():
+        return False
+    try:
+        existing_pid = int(pidfile.read_text().strip())
+    except (ValueError, OSError):
+        return False
+    if existing_pid == os.getpid():
+        # Our own claim — not a competing worker.
+        return False
+    # /proc/<pid> exists iff the process is alive (Linux). On macOS /proc
+    # isn't there; fall back to os.kill(pid, 0).
+    if Path(f"/proc/{existing_pid}").exists():
+        return True
+    try:
+        os.kill(existing_pid, 0)
+        return True
+    except (ProcessLookupError, PermissionError, OSError):
+        return False
+
+
+def claim_pidfile(thread_id: str, pid: int | None = None) -> bool:
+    """Try to claim the single-flight slot for this thread.
+
+    Returns True if claimed (caller should run the anchor and call
+    _clear_pidfile when done), False if another live worker already owns
+    the slot (caller should skip). Writing the pidfile is best-effort.
+    """
+    if anchor_worker_alive(thread_id):
+        return False
+    pidfile = _pidfile_path(thread_id)
+    try:
+        pidfile.parent.mkdir(parents=True, exist_ok=True)
+        pidfile.write_text(str(pid if pid is not None else os.getpid()))
+    except OSError:
+        pass  # best-effort; do not block the anchor on a pidfile write
+    return True
+
+
 def _clear_pidfile(thread_id: str) -> None:
-    """Remove the single-flight pidfile written by launch_anchor_worker_async.
+    """Remove the single-flight pidfile.
 
     Best-effort: failures are swallowed (the next launch's stale-detection
     will overwrite a leftover pidfile anyway).
     """
     try:
-        tinm_home = Path(os.environ.get("TINM_HOME", str(Path.home() / ".tinm")))
-        (tinm_home / f"anchor-worker-{thread_id}.pid").unlink(missing_ok=True)
+        _pidfile_path(thread_id).unlink(missing_ok=True)
     except OSError:
         pass
 

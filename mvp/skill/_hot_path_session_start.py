@@ -136,6 +136,21 @@ def _persist_thread_handoff(session_id: str, thread_id: str) -> None:
     except OSError as exc:
         _log(f"persist session-thread file failed: {exc!r}")
 
+    # Also (re)write the legacy ~/.tinm/current_thread fallback. The Stop
+    # hook deletes the per-session handoff file after the first turn, then
+    # falls back to current_thread for every subsequent turn (see stop.sh).
+    # That fallback only works if SOMETHING keeps current_thread fresh —
+    # historically nothing did, so on hosts without it the Stop hook got an
+    # empty thread on turns >= 2 and silently skipped buffer writes (capture
+    # producer-side outage diagnosed 2026-06-04). SessionStart owns that now.
+    try:
+        cur = TINM_HOME / "current_thread"
+        tmp = TINM_HOME / "current_thread.tmp"
+        tmp.write_text(thread_id + "\n")
+        os.replace(tmp, cur)
+    except OSError as exc:
+        _log(f"persist current_thread fallback failed: {exc!r}")
+
 
 def _run_writable_gate(thread_id: str) -> None:
     """Best-effort: refusal goes to the warn log; never block the session."""

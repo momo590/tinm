@@ -12,10 +12,14 @@ fans out the work in series (each step is independent). The work itself
 runs in the same child process, not in further forks, so the cumulative
 fork cost on the parent's hot path is exactly one Popen.
 
-Order matters for latency-of-effect: anchor worker first (drives the
-next-turn pending hint), then score_and_flush (writes artifacts), then
-push_throttle (Phase 2 sync). Any step's failure must not stop the
-following step — each call is wrapped.
+Order matters for *survival*, not just latency-of-effect: score_and_flush
+runs FIRST because it is cheap (~1s) and high-value, and the anchor that
+follows loads sentence-transformers (~10s, ~600MB) — on a memory-tight
+host the detached process can be OOM-killed mid-anchor. Running capture
+first guarantees the assistant turn is flushed even if the anchor dies.
+Then the anchor (drives the next-turn pending hint), then push_throttle
+(Phase 2 sync). Any step's failure must not stop the following step —
+each call is wrapped.
 
 Invocation:
     python _hot_path_dispatch.py \\
@@ -59,11 +63,29 @@ def _run_anchor(thread_id: str, target_turn: int, session_id: str) -> None:
     coordinates via $TINM_HOME/anchor-worker-<thread>.pid.
     """
     try:
-        from _anchor_worker import run_worker
+        from _anchor_worker import (
+            claim_pidfile,
+            _clear_pidfile,
+            run_worker,
+        )
         from tinm_paths import TINM_PCP_DIR
+    except Exception:
+        _log("dispatch.anchor import failed:\n" + traceback.format_exc())
+        return
+
+    # Single-flight: the in-process run_worker call here bypasses the Popen
+    # path's pidfile guard, so claim it ourselves. Each anchor loads
+    # sentence-transformers (~600MB); without this, rapid prompts stack
+    # model loads and can OOM the host (diagnosed 2026-06-04).
+    if not claim_pidfile(thread_id):
+        _log(f"dispatch.anchor skipped (single-flight) thread={thread_id}")
+        return
+    try:
         run_worker(thread_id, TINM_PCP_DIR, session_id, target_turn)
     except Exception:
         _log("dispatch.anchor failed:\n" + traceback.format_exc())
+    finally:
+        _clear_pidfile(thread_id)
 
 
 def _run_score_and_flush(
@@ -100,6 +122,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--push", metavar="PCP_DIR")
     args = parser.parse_args(argv)
 
+    # score_and_flush runs BEFORE the anchor. The anchor loads
+    # sentence-transformers (~10s, ~600MB) and, on a memory-tight host, the
+    # detached dispatch process can be OOM-killed mid-load — which used to
+    # take the (cheap, ~1s) capture down with it because it ran afterwards.
+    # Capture is the higher-value, lower-cost step, so it goes first: even
+    # if the anchor later dies, the assistant turn is already captured.
+    # See diagnosis 2026-06-04 (capture silent since 2026-05-21).
+    if args.score_and_flush:
+        thread_id, session_id, prompt = args.score_and_flush
+        _run_score_and_flush(thread_id, session_id, prompt, args.next_turn)
+
     if args.anchor:
         thread_id, target_turn_s = args.anchor
         try:
@@ -107,10 +140,6 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError:
             target_turn = 0
         _run_anchor(thread_id, target_turn, args.session_id)
-
-    if args.score_and_flush:
-        thread_id, session_id, prompt = args.score_and_flush
-        _run_score_and_flush(thread_id, session_id, prompt, args.next_turn)
 
     if args.push:
         _run_push(args.push)
